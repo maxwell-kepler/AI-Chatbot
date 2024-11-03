@@ -1,0 +1,13 @@
+{
+    "expo": {
+        "name": "Chat-App",
+        "slug": "Chat-App",
+        "version": "1.0.0",
+        "orientation": "portrait",
+        "userInterfaceStyle": "light",
+        "ios": {
+            "supportsTablet": true
+        },
+        "android": {}
+    }
+}
