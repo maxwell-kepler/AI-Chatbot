@@ -4,13 +4,11 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import {
     MessageCircle,
-    LineChart,
     Library,
-    Settings
 } from 'lucide-react-native';
 import { theme } from '../styles/theme';
 import ChatScreen from '../screens/chat/ChatScreen';
-
+import ResourcesScreen from '../screens/resources/ResourcesScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -36,6 +34,26 @@ const ChatStack = () => (
     </Stack.Navigator>
 );
 
+const ResourcesStack = () => (
+    <Stack.Navigator
+        screenOptions={{
+            headerStyle: {
+                backgroundColor: theme.colors.neutral.white,
+            },
+            headerTintColor: theme.colors.primary.main,
+            headerTitleStyle: {
+                ...theme.typography.presets.header3,
+            },
+            headerShadowVisible: false,
+        }}
+    >
+        <Stack.Screen
+            name="ResourcesMain"
+            component={ResourcesScreen}
+            options={{ title: 'Resources' }}
+        />
+    </Stack.Navigator>
+);
 
 const MainNavigator = () => {
     return (
@@ -66,7 +84,15 @@ const MainNavigator = () => {
                     ),
                 }}
             />
-
+            <Tab.Screen
+                name="Resources"
+                component={ResourcesStack}
+                options={{
+                    tabBarIcon: ({ color, size }) => (
+                        <Library size={size} color={color} />
+                    ),
+                }}
+            />
         </Tab.Navigator>
     );
 };
