@@ -53,4 +53,9 @@ export default StyleSheet.create({
         ...theme.typography.presets.body2,
         color: theme.colors.neutral.grey600,
     },
+    errorText: {
+        ...theme.typography.presets.caption,
+        color: theme.colors.error.main,
+        marginTop: theme.spacing.xs,
+    },
 });
