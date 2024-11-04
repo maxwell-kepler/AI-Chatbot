@@ -13,6 +13,7 @@ export default StyleSheet.create({
         borderWidth: 1,
         borderColor: theme.colors.primary.main,
         marginRight: theme.spacing.sm,
+        height: "80%"
     },
     selected: {
         backgroundColor: theme.colors.primary.main,

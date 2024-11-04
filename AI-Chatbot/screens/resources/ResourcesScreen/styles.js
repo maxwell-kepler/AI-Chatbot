@@ -1,17 +1,23 @@
 // src/screens/resources/ResourcesScreen/styles.js
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
 import { theme } from '../../../styles/theme';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: theme.colors.neutral.background,
     },
-    searchContainer: {
-        padding: theme.spacing.md,
+    topSection: {
+        height: SCREEN_HEIGHT * 0.08,
         backgroundColor: theme.colors.neutral.white,
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.neutral.grey200,
+        justifyContent: 'center',
+    },
+    searchContainer: {
+        padding: theme.spacing.md,
     },
     searchInputContainer: {
         flexDirection: 'row',
@@ -27,16 +33,19 @@ export default StyleSheet.create({
         ...theme.typography.presets.body1,
         color: theme.colors.neutral.grey900,
     },
-    categoriesContainer: {
+    categoriesSection: {
+        height: SCREEN_HEIGHT * 0.2,
         backgroundColor: theme.colors.neutral.white,
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.neutral.grey200,
+        justifyContent: 'center',
     },
     categoriesContent: {
-        padding: theme.spacing.md,
+        paddingHorizontal: theme.spacing.md,
+        alignItems: 'center',
         gap: theme.spacing.sm,
     },
-    resourcesContainer: {
+    resourcesSection: {
         flex: 1,
     },
     resourcesContent: {
