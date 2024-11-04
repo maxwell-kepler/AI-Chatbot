@@ -1,22 +1,35 @@
-// src/components / specific / Chat / ChatBubble / index.js
+// src/components/specific/Chat/ChatBubble/index.js
 import React from 'react';
 import { View, Text } from 'react-native';
+import { formatMessageTime } from '../../../../utils/dateUtils';
 import styles from './styles';
 
-const ChatBubble = ({ message, isUser }) => {
+const ChatBubble = ({ message, isUser, timestamp, showTimestamp }) => {
     return (
         <View style={[
-            styles.container,
-            isUser ? styles.userContainer : styles.aiContainer
+            styles.bubbleWrapper,
+            isUser ? styles.userBubbleWrapper : styles.aiBubbleWrapper
         ]}>
-            <Text style={[
-                styles.text,
-                isUser ? styles.userText : styles.aiText
+            <View style={[
+                styles.bubble,
+                isUser ? styles.userBubble : styles.aiBubble
             ]}>
-                {message}
-            </Text>
+                <Text style={[
+                    styles.text,
+                    isUser ? styles.userText : styles.aiText
+                ]}>
+                    {message}
+                </Text>
+            </View>
+            {showTimestamp && (
+                <Text style={[
+                    styles.timestamp,
+                    isUser ? styles.userTimestamp : styles.aiTimestamp
+                ]}>
+                    {formatMessageTime(timestamp)}
+                </Text>
+            )}
         </View>
     );
 };
-
 export default ChatBubble;

@@ -3,19 +3,28 @@ import { StyleSheet } from 'react-native';
 import { theme } from '../../../../styles/theme';
 
 export default StyleSheet.create({
-    container: {
+    bubbleWrapper: {
+        marginVertical: theme.spacing.xs,
         maxWidth: '80%',
+    },
+    userBubbleWrapper: {
+        alignSelf: 'flex-end',
+        alignItems: 'flex-end',
+    },
+    aiBubbleWrapper: {
+        alignSelf: 'flex-start',
+        alignItems: 'flex-start',
+    },
+    bubble: {
         padding: theme.spacing.md,
         borderRadius: theme.borderRadius.lg,
-        marginBottom: theme.spacing.sm,
+        marginBottom: theme.spacing.xxs,
     },
-    userContainer: {
-        alignSelf: 'flex-end',
+    userBubble: {
         backgroundColor: theme.colors.primary.main,
         borderTopRightRadius: theme.spacing.xs,
     },
-    aiContainer: {
-        alignSelf: 'flex-start',
+    aiBubble: {
         backgroundColor: theme.colors.neutral.grey100,
         borderTopLeftRadius: theme.spacing.xs,
     },
@@ -27,5 +36,15 @@ export default StyleSheet.create({
     },
     aiText: {
         color: theme.colors.neutral.grey900,
+    },
+    timestamp: {
+        ...theme.typography.presets.caption,
+        marginHorizontal: theme.spacing.xs,
+    },
+    userTimestamp: {
+        color: theme.colors.neutral.grey600,
+    },
+    aiTimestamp: {
+        color: theme.colors.neutral.grey600,
     },
 });

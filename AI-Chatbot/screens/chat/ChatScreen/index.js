@@ -3,20 +3,17 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
     ScrollView,
-    KeyboardAvoidingView,
-    Platform,
     ActivityIndicator,
-    Keyboard,
-    Dimensions,
 } from 'react-native';
 import { theme } from '../../../styles/theme';
 import ChatBubble from '../../../components/specific/Chat/ChatBubble';
 import MessageInput from '../../../components/specific/Chat/MessageInput';
 import { chatWithGemini } from '../../../services/geminiService';
 import styles from './styles';
+import { WELCOME_MESSAGE } from '../../../config/promptConfig';
 
 const INITIAL_MESSAGE = {
-    text: "Hi! I'm here to help. How are you feeling today?",
+    text: WELCOME_MESSAGE,
     isUser: false,
     timestamp: new Date(),
 };
@@ -24,48 +21,12 @@ const INITIAL_MESSAGE = {
 const ChatScreen = () => {
     const [messages, setMessages] = useState([INITIAL_MESSAGE]);
     const [loading, setLoading] = useState(false);
-    const [keyboardHeight, setKeyboardHeight] = useState(0);
     const scrollViewRef = useRef(null);
-    const [scrollViewHeight, setScrollViewHeight] = useState(0);
-    const [contentHeight, setContentHeight] = useState(0);
-
-    useEffect(() => {
-        const keyboardWillShow = (event) => {
-            setKeyboardHeight(event.endCoordinates.height);
-        };
-
-        const keyboardWillHide = () => {
-            setKeyboardHeight(0);
-        };
-
-        const keyboardDidShow = Keyboard.addListener(
-            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-            keyboardWillShow
-        );
-        const keyboardDidHide = Keyboard.addListener(
-            Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-            keyboardWillHide
-        );
-
-        return () => {
-            keyboardDidShow.remove();
-            keyboardDidHide.remove();
-        };
-    }, []);
 
     const scrollToBottom = (animated = true) => {
-        if (scrollViewRef.current && contentHeight > scrollViewHeight) {
+        if (scrollViewRef.current) {
             scrollViewRef.current.scrollToEnd({ animated });
         }
-    };
-
-    const handleContentSizeChange = (width, height) => {
-        setContentHeight(height);
-        scrollToBottom();
-    };
-
-    const handleLayoutChange = (event) => {
-        setScrollViewHeight(event.nativeEvent.layout.height);
     };
 
     const handleSend = async (message) => {
@@ -102,58 +63,39 @@ const ChatScreen = () => {
         }
     };
 
-    const windowHeight = Dimensions.get('window').height;
-    const inputHeight = 60; // Approximate height of input container
-    const headerHeight = Platform.OS === 'ios' ? 90 : 60; // Approximate header height
-
     return (
         <View style={styles.container}>
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={styles.keyboardAvoidingView}
-                keyboardVerticalOffset={headerHeight}
-            >
-                <View
-                    style={[
-                        styles.chatContainer,
-                        { maxHeight: windowHeight - headerHeight - inputHeight }
-                    ]}
+            <View style={styles.chatContainer}>
+                <ScrollView
+                    ref={scrollViewRef}
+                    style={styles.messagesContainer}
+                    contentContainerStyle={styles.messagesContent}
+                    onContentSizeChange={() => scrollToBottom()}
+                    keyboardShouldPersistTaps="handled"
                 >
-                    <ScrollView
-                        ref={scrollViewRef}
-                        style={styles.messagesContainer}
-                        contentContainerStyle={styles.messagesContent}
-                        onContentSizeChange={handleContentSizeChange}
-                        onLayout={handleLayoutChange}
-                        keyboardShouldPersistTaps="handled"
-                        showsVerticalScrollIndicator={true}
-                        maintainVisibleContentPosition={{
-                            minIndexForVisible: 0,
-                            autoscrollToTopThreshold: 100,
-                        }}
-                    >
-                        {messages.map((message, index) => (
-                            <ChatBubble
-                                key={index}
-                                message={message.text}
-                                isUser={message.isUser}
-                            />
-                        ))}
-                        {loading && (
-                            <View style={styles.loadingContainer}>
-                                <ActivityIndicator color={theme.colors.primary.main} />
-                            </View>
-                        )}
-                    </ScrollView>
-                </View>
+                    {messages.map((message, index) => (
+                        <ChatBubble
+                            key={index}
+                            message={message.text}
+                            isUser={message.isUser}
+                            timestamp={message.timestamp}
+                            showTimestamp={true}
+                        />
+                    ))}
+                    {loading && (
+                        <View style={styles.loadingContainer}>
+                            <ActivityIndicator color={theme.colors.primary.main} />
+                        </View>
+                    )}
+                </ScrollView>
+            </View>
 
-                <View style={styles.inputContainer}>
-                    <MessageInput
-                        onSend={handleSend}
-                        disabled={loading}
-                    />
-                </View>
-            </KeyboardAvoidingView>
+            <View style={styles.inputWrapper}>
+                <MessageInput
+                    onSend={handleSend}
+                    disabled={loading}
+                />
+            </View>
         </View>
     );
 };
