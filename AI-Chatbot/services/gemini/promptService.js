@@ -6,7 +6,7 @@ import {
     WELCOME_MESSAGE,
     SYSTEM_PROMPT,
     CRISIS_KEYWORDS
-} from '../config/promptConfig';
+} from '../../config/promptConfig';
 
 class PromptEngineering {
     constructor() {

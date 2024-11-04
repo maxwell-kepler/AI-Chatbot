@@ -8,7 +8,7 @@ import {
 import { theme } from '../../../styles/theme';
 import ChatBubble from '../../../components/specific/Chat/ChatBubble';
 import MessageInput from '../../../components/specific/Chat/MessageInput';
-import { chatWithGemini } from '../../../services/geminiService';
+import { chatWithGemini } from '../../../services/gemini/geminiService';
 import styles from './styles';
 import { WELCOME_MESSAGE } from '../../../config/promptConfig';
 
