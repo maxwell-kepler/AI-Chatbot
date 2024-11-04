@@ -1,6 +1,6 @@
 // src/services/geminiService.js
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import configAPI from '../configAPI';
+import configAPI from '../config';
 import promptService from './promptService';
 
 const genAI = new GoogleGenerativeAI(configAPI.GEMINI_API_KEY);
