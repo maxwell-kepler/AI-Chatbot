@@ -1,4 +1,5 @@
-// src/components/specific/Resources/ResourceCard/index.js
+// ResourceCard/index.js
+// ResourceCard/index.js
 import React from 'react';
 import { View, Text, TouchableOpacity, Linking } from 'react-native';
 import { MapPin, Phone, Clock, ExternalLink } from 'lucide-react-native';
@@ -13,6 +14,11 @@ const ResourceCard = ({ resource }) => {
     const handleWebsitePress = () => {
         Linking.openURL(resource.website);
     };
+
+    // Filter out any tags that match the category name
+    const filteredTags = Array.isArray(resource.tags)
+        ? resource.tags.filter(tag => tag !== resource.category_name)
+        : [];
 
     return (
         <View style={styles.container}>
@@ -49,11 +55,23 @@ const ResourceCard = ({ resource }) => {
             </View>
 
             <View style={styles.tagsContainer}>
-                {resource.tags.map((tag, index) => (
+                <View style={[styles.tag, styles.categoryTag]}>
+                    <Text style={styles.categoryTagText}>
+                        {resource.category_name}
+                    </Text>
+                </View>
+
+                {filteredTags.map((tag, index) => (
                     <View key={index} style={styles.tag}>
                         <Text style={styles.tagText}>{tag}</Text>
                     </View>
                 ))}
+
+                {resource.hours === '24/7' && (
+                    <View style={[styles.tag, styles.availabilityTag]}>
+                        <Text style={styles.availabilityTagText}>24/7</Text>
+                    </View>
+                )}
             </View>
         </View>
     );

@@ -13,13 +13,15 @@ export default StyleSheet.create({
         borderWidth: 1,
         borderColor: theme.colors.primary.main,
         marginRight: theme.spacing.sm,
-        height: "80%"
-    },
-    selected: {
-        backgroundColor: theme.colors.primary.main,
+        height: "80%", // Fixed height instead of percentage
     },
     icon: {
         marginRight: theme.spacing.xs,
+        width: 16,
+        height: 16,
+    },
+    selected: {
+        backgroundColor: theme.colors.primary.main,
     },
     text: {
         ...theme.typography.presets.body2,
