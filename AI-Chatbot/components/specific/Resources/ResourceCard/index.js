@@ -14,6 +14,12 @@ const ResourceCard = ({ resource }) => {
         Linking.openURL(resource.website);
     };
 
+    // Find category name based on category_id
+    const getCategoryName = () => {
+        // This should be replaced with actual category lookup logic
+        return resource.categoryName || 'General';
+    };
+
     return (
         <View style={styles.container}>
             <View style={styles.header}>
@@ -49,11 +55,14 @@ const ResourceCard = ({ resource }) => {
             </View>
 
             <View style={styles.tagsContainer}>
-                {resource.tags.map((tag, index) => (
-                    <View key={index} style={styles.tag}>
-                        <Text style={styles.tagText}>{tag}</Text>
+                <View style={styles.tag}>
+                    <Text style={styles.tagText}>{getCategoryName()}</Text>
+                </View>
+                {resource.hours === '24/7' && (
+                    <View style={[styles.tag, { backgroundColor: theme.colors.success.light }]}>
+                        <Text style={[styles.tagText, { color: theme.colors.success.dark }]}>24/7</Text>
                     </View>
-                ))}
+                )}
             </View>
         </View>
     );

@@ -2,6 +2,11 @@ USE `mental_health_support`;
 
 DROP TABLE IF EXISTS `users`;
 
+DROP TABLE IF EXISTS `resource_tags`;
+DROP TABLE IF EXISTS `resources`;
+DROP TABLE IF EXISTS `categories`;
+DROP TABLE IF EXISTS `tags`;
+
 -- Create User table
 CREATE TABLE users (
     user_id VARCHAR(36) PRIMARY KEY,
@@ -16,34 +21,45 @@ CREATE TABLE users (
     first_name VARCHAR(50),
     last_name VARCHAR(50),
     date_of_birth DATE,
-    
-    -- Preferences and Settings
+
     notification_preferences JSON,
     privacy_settings JSON,
     
-    -- Meta information
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
-    -- Indexes
+
     INDEX idx_email (email),
     INDEX idx_username (username)
 );
 
--- Create a sample user (for testing)
-INSERT INTO users (
-    user_id, 
-    email, 
-    password_hash,
-    username,
-    first_name,
-    last_name
-) VALUES (
-    UUID(),
-    'test@example.com',
-    '$2b$10$ExampleHashedPassword',
-    'testuser',
-    'Test',
-    'User'
+CREATE TABLE categories (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(50) NOT NULL,
+    icon VARCHAR(50) NOT NULL
 );
 
-SELECT * FROM users;
+CREATE TABLE resources (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+    category_id INT NOT NULL,
+    phone VARCHAR(20),
+    address VARCHAR(255),
+    hours VARCHAR(100),
+    website VARCHAR(255),
+    FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+
+CREATE TABLE tags (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(50) NOT NULL UNIQUE
+);
+
+CREATE TABLE resource_tags (
+    resource_id INT,
+    tag_id INT,
+    PRIMARY KEY (resource_id, tag_id),
+    FOREIGN KEY (resource_id) REFERENCES resources(id),
+    FOREIGN KEY (tag_id) REFERENCES tags(id)
+);
+
+SHOW TABLES;

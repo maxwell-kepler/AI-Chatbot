@@ -1,47 +1,82 @@
 // src/screens/resources/ResourcesScreen/index.js
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
     View,
     Text,
     ScrollView,
     TextInput,
     RefreshControl,
+    Alert,
+    ActivityIndicator
 } from 'react-native';
 import { Search } from 'lucide-react-native';
 import ResourceCard from '../../../components/specific/Resources/ResourceCard';
 import CategoryPill from '../../../components/specific/Resources/CategoryPill';
 import { theme } from '../../../styles/theme';
 import styles from './styles';
-import { CATEGORIES, MOCK_RESOURCES } from '../../../data/mockResources';
+import { resourceService } from '../../../services/database/resourceService';
 
 const ResourcesScreen = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [categories, setCategories] = useState([]);
+    const [resources, setResources] = useState([]);
 
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const [categoriesData, resourcesData] = await Promise.all([
+                resourceService.fetchCategories(),
+                resourceService.fetchResources()
+            ]);
+
+            setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+            setResources(Array.isArray(resourcesData) ? resourcesData : []);
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            Alert.alert(
+                'Error',
+                'Failed to fetch resources. Please try again later.'
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
 
     const handleSearch = (text) => {
         setSearchQuery(text);
-        // Will implement actual search logic when connected to database
     };
 
     const handleCategorySelect = (categoryId) => {
         setSelectedCategory(categoryId === selectedCategory ? null : categoryId);
-        // Will implement category filtering when connected to database
     };
 
-    const handleRefresh = useCallback(() => {
+    const handleRefresh = useCallback(async () => {
         setRefreshing(true);
-        // Will implement data refresh when connected to database
-        setTimeout(() => setRefreshing(false), 1000);
+        await fetchData();
+        setRefreshing(false);
     }, []);
 
-    const filteredResources = MOCK_RESOURCES.filter(resource => {
+    const filteredResources = resources.filter(resource => {
         const matchesSearch = resource.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             resource.description.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesCategory = !selectedCategory || resource.category === CATEGORIES.find(c => c.id === selectedCategory)?.name;
+        const matchesCategory = !selectedCategory || resource.category_id === selectedCategory;
         return matchesSearch && matchesCategory;
     });
+
+    if (loading) {
+        return (
+            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color={theme.colors.primary.main} />
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
@@ -66,12 +101,16 @@ const ResourcesScreen = () => {
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.categoriesContent}
                 >
-                    {CATEGORIES.map((category) => (
+                    {categories.map((category) => (
                         <CategoryPill
                             key={category.id}
-                            category={category}
+                            category={{
+                                id: category.id,
+                                name: category.name,
+                                icon: category.icon
+                            }}
                             isSelected={selectedCategory === category.id}
-                            onSelect={handleCategorySelect}
+                            onSelect={() => handleCategorySelect(category.id)}
                         />
                     ))}
                 </ScrollView>
@@ -88,21 +127,29 @@ const ResourcesScreen = () => {
                         />
                     }
                 >
-                    {filteredResources.length === 0 ? (
-                        <View style={styles.emptyState}>
-                            <Text style={styles.emptyStateText}>No resources found</Text>
-                        </View>
-                    ) : (
-                        filteredResources.map((resource) => (
+                    {filteredResources.map((resource) => {
+                        // Find the category for this resource
+                        const category = categories.find(cat => cat.id === resource.category_id);
+
+                        return (
                             <ResourceCard
                                 key={resource.id}
-                                resource={resource}
+                                resource={{
+                                    id: resource.id,
+                                    name: resource.name,
+                                    description: resource.description,
+                                    phone: resource.phone,
+                                    address: resource.address,
+                                    website: resource.website,
+                                    hours: resource.hours,
+                                    categoryId: resource.category_id,
+                                    categoryName: category ? category.name : 'General'
+                                }}
                             />
-                        ))
-                    )}
+                        );
+                    })}
                 </ScrollView>
             </View>
-
         </View>
     );
 };

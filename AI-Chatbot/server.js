@@ -1,3 +1,4 @@
+//src/server.js
 const express = require('express');
 const cors = require('cors');
 const db = require('./config/database');
@@ -44,6 +45,37 @@ app.get('/api/users', async (req, res) => {
         });
     }
 });
+
+app.get('/api/categories', async (req, res) => {
+    try {
+        const [rows] = await db.execute(
+            'SELECT * FROM categories'
+        );
+        res.json(rows);
+    } catch (error) {
+        console.error('Error fetching categories:', error);
+        res.status(500).json({
+            message: 'Failed to fetch categories',
+            error: error.message
+        });
+    }
+});
+
+app.get('/api/resources', async (req, res) => {
+    try {
+        const [rows] = await db.execute(
+            'SELECT * FROM resources'
+        );
+        res.json(rows);
+    } catch (error) {
+        console.error('Error fetching resources:', error);
+        res.status(500).json({
+            message: 'Failed to fetch resources',
+            error: error.message
+        });
+    }
+});
+
 
 // Create new user
 app.post('/api/users', async (req, res) => {
