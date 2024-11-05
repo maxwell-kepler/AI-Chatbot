@@ -19,7 +19,7 @@ export default function App() {
         return <LoadingScreen />;
     }
 
-    return <TestDatabaseScreen />;
+    //return <TestDatabaseScreen />;
 
     return (
         <SafeAreaProvider>

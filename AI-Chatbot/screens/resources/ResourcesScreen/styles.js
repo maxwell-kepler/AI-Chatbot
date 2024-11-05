@@ -34,7 +34,7 @@ export default StyleSheet.create({
         color: theme.colors.neutral.grey900,
     },
     categoriesSection: {
-        height: SCREEN_HEIGHT * 0.2,
+        height: SCREEN_HEIGHT * 0.1,
         backgroundColor: theme.colors.neutral.white,
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.neutral.grey200,
