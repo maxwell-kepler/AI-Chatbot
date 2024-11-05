@@ -77,4 +77,49 @@ export const userService = {
             throw error;
         }
     },
+    createUser: async (userData) => {
+        try {
+            console.log('Sending request to:', `${API_URL}/users`);
+            console.log('With data:', userData);
+
+            const response = await fetch(`${API_URL}/users`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify(userData)
+            });
+
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+
+            // Log raw response first
+            const text = await response.text();
+            console.log('Raw response:', text);
+
+            // Try to parse JSON
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (parseError) {
+                console.error('JSON parse error:', parseError);
+                throw new Error('Invalid JSON response from server');
+            }
+
+            console.log('Parsed response:', data);
+
+            /*if (!response.ok) {
+                throw new Error(data.message || 'Failed to create user');
+            }*/
+
+        } catch (error) {
+            console.error('Error creating user:', {
+                message: error.message,
+                stack: error.stack,
+                platform: Platform.OS
+            });
+            throw error;
+        }
+    },
 };

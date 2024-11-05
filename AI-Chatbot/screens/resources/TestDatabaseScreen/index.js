@@ -76,6 +76,55 @@ const TestDatabaseScreen = () => {
         handleFetchUsers();
     };
 
+    const handleCreateUser = useCallback(async () => {
+        console.log("email", email);
+        console.log("password", password);
+        console.log("username", username);
+        if (!email || !password || !username) {
+            Alert.alert('Error', 'Please fill in all required fields');
+            return;
+        }
+        try {
+            setLoading(true);
+            setResult('Creating user...');
+
+            const userData = {
+                email,
+                password,
+                username,
+                firstName,
+                lastName
+            };
+
+            console.log('Sending request to:', `${API_URL}/users`);
+            console.log('With data:', userData);
+
+            const data = await userService.createUser(userData);
+
+            //if (data) {
+            Alert.alert('Success', 'User created successfully!');
+            // Clear form
+            setEmail('');
+            setPassword('');
+            setUsername('');
+            setFirstName('');
+            setLastName('');
+
+            //}
+        } catch (error) {
+            console.error('Error creating user:', {
+                message: error.message,
+                stack: error.stack,
+                platform: Platform.OS
+            });
+            Alert.alert('Error', `Failed to create user: ${error.message}`);
+        } finally {
+            // Refresh user list
+            handleFetchUsers();
+            setLoading(false);
+        }
+    }, []);
+
     const createUser = async () => {
         if (!email || !password || !username) {
             Alert.alert('Error', 'Please fill in all required fields');
@@ -223,7 +272,7 @@ const TestDatabaseScreen = () => {
 
                 <TouchableOpacity
                     style={[styles.button, loading && styles.buttonDisabled]}
-                    onPress={createUser}
+                    onPress={handleCreateUser}
                     disabled={loading}
                 >
                     {loading ? (
