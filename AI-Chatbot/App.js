@@ -8,6 +8,7 @@ import AuthNavigator from './navigation/AuthNavigator';
 import MainNavigator from './navigation/MainNavigator';
 import { useAuth } from './hooks/useAuth';
 import LoadingScreen from './screens/common/LoadingScreen';
+import TestDatabaseScreen from './screens/resources/TestDatabaseScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -17,6 +18,8 @@ export default function App() {
     if (loading) {
         return <LoadingScreen />;
     }
+
+    return <TestDatabaseScreen />;
 
     return (
         <SafeAreaProvider>
