@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -12,6 +12,7 @@ import {
     RefreshControl
 } from 'react-native';
 import { API_URL } from '../../../config/api';
+import { userService } from '../../../services/database/userService';
 
 const TestDatabaseScreen = () => {
     const [email, setEmail] = useState('');
@@ -24,31 +25,11 @@ const TestDatabaseScreen = () => {
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
-    const fetchUsers = async () => {
+    const handleFetchUsers = useCallback(async () => {
         try {
             setLoading(true);
-            console.log('Fetching users from:', `${API_URL}/users`);
-
-            const response = await fetch(`${API_URL}/users`);
-            console.log('Response status:', response.status);
-            console.log('Response headers:', response.headers);
-
-            // Log the raw response text first
-            const text = await response.text();
-            console.log('Raw response:', text);
-
-            // Try to parse as JSON
-            let data;
-            try {
-                data = JSON.parse(text);
-            } catch (parseError) {
-                console.error('JSON parse error:', parseError);
-                throw new Error('Invalid JSON response from server');
-            }
-
-            console.log('Parsed data:', data);
+            const data = await userService.fetchUsers();
             setUsers(Array.isArray(data) ? data : []);
-
         } catch (error) {
             console.error('Detailed error:', {
                 message: error.message,
@@ -63,53 +44,36 @@ const TestDatabaseScreen = () => {
             setLoading(false);
             setRefreshing(false);
         }
-    };
+    }, []);
 
-
-
-    const testConnection = async () => {
+    const handleTestConnections = useCallback(async () => {
         try {
             setResult('Testing connection...');
-            console.log('Testing connection to:', `${API_URL}/test`);
-
-            const response = await fetch(`${API_URL}/test`);
-            console.log('Response status:', response.status);
-            console.log('Response headers:', response.headers);
-
-            const text = await response.text();
-            console.log('Raw test response:', text);
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            try {
-                const data = JSON.parse(text);
-                console.log('Test response parsed:', data);
-                setResult(`Connection successful: ${JSON.stringify(data, null, 2)}`);
-                Alert.alert('Success', 'Backend connection successful!');
-            } catch (parseError) {
-                console.error('Parse error:', parseError);
-                throw new Error('Invalid JSON response from server');
-            }
+            setLoading(true);
+            const data = await userService.testConnection();
+            setResult(`Connection successful: ${JSON.stringify(data, null, 2)}`);
+            Alert.alert('Success', 'Backend connection successful!');
         } catch (error) {
-            console.error('Connection test failed:', {
+            console.error('Detailed error:', {
                 message: error.message,
-                stack: error.stack
+                stack: error.stack,
+                platform: Platform.OS
             });
             setResult(`Connection failed: ${error.message}`);
             Alert.alert('Error', `Connection test failed: ${error.message}`);
+        } finally {
+            setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
-        testConnection();
-        fetchUsers();
+        handleTestConnections();
+        handleFetchUsers();
     }, []);
 
     const onRefresh = () => {
         setRefreshing(true);
-        fetchUsers();
+        handleFetchUsers();
     };
 
     const createUser = async () => {
@@ -170,7 +134,7 @@ const TestDatabaseScreen = () => {
                 setFirstName('');
                 setLastName('');
                 // Refresh user list
-                fetchUsers();
+                handleFetchUsers();
             } else {
                 throw new Error(data.message || 'Failed to create user');
             }
