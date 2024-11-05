@@ -13,22 +13,11 @@ import CategoryPill from '../../../components/specific/Resources/CategoryPill';
 import { theme } from '../../../styles/theme';
 import styles from './styles';
 import { CATEGORIES, MOCK_RESOURCES } from '../../../data/mockResources';
-import firestoreService from '../../../services/firestoreService';
 
 const ResourcesScreen = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
-
-
-    // In your component
-    firestoreService.checkDatabaseConnection()
-        .then(result => {
-            console.log('Connection test result:', result);
-        })
-        .catch(error => {
-            console.error('Connection test failed:', error);
-        });
 
 
     const handleSearch = (text) => {

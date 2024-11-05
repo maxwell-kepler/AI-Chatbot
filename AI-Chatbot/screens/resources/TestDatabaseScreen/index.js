@@ -11,7 +11,7 @@ import {
     ActivityIndicator,
     RefreshControl
 } from 'react-native';
-import { API_URL } from '../../../config/api.config';
+import { API_URL } from '../../../config/api';
 
 const TestDatabaseScreen = () => {
     const [email, setEmail] = useState('');
