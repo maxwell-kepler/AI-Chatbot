@@ -1,80 +1,90 @@
-// src/components/specific/Resources/ResourceCard/styles.js
+// ResourceCard/styles.js
 import { StyleSheet } from 'react-native';
 import { theme } from '../../../../styles/theme';
 
 export default StyleSheet.create({
     container: {
-        backgroundColor: theme.colors.neutral.white,
-        borderRadius: theme.borderRadius.lg,
-        padding: theme.spacing.lg,
-        ...theme.shadows.base,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        padding: 16,
         marginVertical: 8,
         marginHorizontal: 16,
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: theme.spacing.sm,
+        marginBottom: 8,
     },
     name: {
-        ...theme.typography.presets.header3,
-        color: theme.colors.neutral.grey900,
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#1a1a1a',
         flex: 1,
     },
     description: {
-        ...theme.typography.presets.body1,
-        color: theme.colors.neutral.grey700,
-        marginBottom: theme.spacing.md,
+        fontSize: 14,
+        color: '#666666',
+        marginBottom: 12,
     },
     detailsContainer: {
-        gap: theme.spacing.sm,
-        marginBottom: theme.spacing.md,
+        marginBottom: 12,
     },
     detailRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: theme.spacing.sm,
+        marginBottom: 8,
     },
     detailText: {
-        ...theme.typography.presets.body2,
-        color: theme.colors.neutral.grey600,
+        fontSize: 14,
+        color: '#666666',
+        marginLeft: 8,
         flex: 1,
     },
     phone: {
-        color: theme.colors.primary.main,
+        color: '#007AFF',
     },
     tagsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: theme.spacing.xs,
-        marginTop: theme.spacing.sm,
+        gap: 8,
+        marginTop: 8,
     },
     tag: {
-        backgroundColor: theme.colors.neutral.grey100,
-        paddingVertical: theme.spacing.xxs,
-        paddingHorizontal: theme.spacing.sm,
-        borderRadius: theme.borderRadius.full,
+        backgroundColor: '#F5F5F5',
+        paddingVertical: 4,
+        paddingHorizontal: 12,
+        borderRadius: 16,
+        marginRight: 8,
+        marginBottom: 8,
     },
     tagText: {
-        ...theme.typography.presets.caption,
-        color: theme.colors.neutral.grey700,
+        fontSize: 12,
+        color: '#666666',
+        fontWeight: '500',
     },
-    // New styles for different tag types
     categoryTag: {
-        backgroundColor: theme.colors.primary.light,
+        backgroundColor: '#E3F2FD',
     },
     categoryTagText: {
-        ...theme.typography.presets.caption,
-        color: theme.colors.primary.dark,
+        fontSize: 12,
+        color: '#1976D2',
         fontWeight: '600',
     },
     availabilityTag: {
-        backgroundColor: theme.colors.success.light,
+        backgroundColor: '#E8F5E9',
     },
     availabilityTagText: {
-        ...theme.typography.presets.caption,
-        color: theme.colors.success.dark,
+        fontSize: 12,
+        color: '#2E7D32',
         fontWeight: '500',
     },
 });

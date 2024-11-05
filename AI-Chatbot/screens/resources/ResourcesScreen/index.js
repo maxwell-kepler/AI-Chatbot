@@ -128,14 +128,14 @@ const ResourcesScreen = () => {
                 >
                     {filteredResources.map((resource) => {
                         const category = categories.find(cat => cat.id === resource.category_id);
-                        console.log('Category found:', category); // Debug log
 
                         return (
                             <ResourceCard
                                 key={resource.id}
                                 resource={{
                                     ...resource,
-                                    category_name: category ? category.name : 'Unknown Category'
+                                    category_name: category ? category.name : 'Unknown Category',
+                                    // No need to process tags as they're already an array from the server
                                 }}
                             />
                         );

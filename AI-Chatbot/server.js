@@ -68,15 +68,17 @@ app.get('/api/resources', async (req, res) => {
                 r.*,
                 c.name as category_name,
                 c.icon as category_icon,
-                GROUP_CONCAT(t.name) as tags
+                GROUP_CONCAT(DISTINCT t.name) as tags
             FROM resources r
             LEFT JOIN categories c ON r.category_id = c.id
             LEFT JOIN resource_tags rt ON r.id = rt.resource_id
             LEFT JOIN tags t ON rt.tag_id = t.id
-            GROUP BY r.id
+            GROUP BY r.id, r.name, r.description, r.category_id, 
+                     r.phone, r.address, r.hours, r.website,
+                     c.name, c.icon
         `);
 
-        // Format the response to include tags as an array
+        // Process the results to convert the comma-separated tags into arrays
         const formattedResources = rows.map(resource => ({
             ...resource,
             tags: resource.tags ? resource.tags.split(',') : []
