@@ -6,18 +6,14 @@ import { theme } from '../../../../styles/theme';
 import styles from './styles';
 
 const ResourceCard = ({ resource }) => {
+    console.log('Resource in card:', resource);
+
     const handlePhonePress = () => {
         Linking.openURL(`tel:${resource.phone}`);
     };
 
     const handleWebsitePress = () => {
         Linking.openURL(resource.website);
-    };
-
-    // Find category name based on category_id
-    const getCategoryName = () => {
-        // This should be replaced with actual category lookup logic
-        return resource.categoryName || 'General';
     };
 
     return (
@@ -55,12 +51,17 @@ const ResourceCard = ({ resource }) => {
             </View>
 
             <View style={styles.tagsContainer}>
-                <View style={styles.tag}>
-                    <Text style={styles.tagText}>{getCategoryName()}</Text>
+                {/* Display category name as a tag */}
+                <View style={[styles.tag, styles.categoryTag]}>
+                    <Text style={styles.categoryTagText}>
+                        {resource.category_name || 'Category'}
+                    </Text>
                 </View>
+
+                {/* Hours tag */}
                 {resource.hours === '24/7' && (
-                    <View style={[styles.tag, { backgroundColor: theme.colors.success.light }]}>
-                        <Text style={[styles.tagText, { color: theme.colors.success.dark }]}>24/7</Text>
+                    <View style={[styles.tag, styles.availabilityTag]}>
+                        <Text style={styles.availabilityTagText}>24/7</Text>
                     </View>
                 )}
             </View>

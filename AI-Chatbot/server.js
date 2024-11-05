@@ -63,12 +63,74 @@ app.get('/api/categories', async (req, res) => {
 
 app.get('/api/resources', async (req, res) => {
     try {
-        const [rows] = await db.execute(
-            'SELECT * FROM resources'
-        );
-        res.json(rows);
+        const [rows] = await db.execute(`
+            SELECT 
+                r.*,
+                c.name as category_name,
+                c.icon as category_icon,
+                GROUP_CONCAT(t.name) as tags
+            FROM resources r
+            LEFT JOIN categories c ON r.category_id = c.id
+            LEFT JOIN resource_tags rt ON r.id = rt.resource_id
+            LEFT JOIN tags t ON rt.tag_id = t.id
+            GROUP BY r.id
+        `);
+
+        // Format the response to include tags as an array
+        const formattedResources = rows.map(resource => ({
+            ...resource,
+            tags: resource.tags ? resource.tags.split(',') : []
+        }));
+
+        res.json(formattedResources);
     } catch (error) {
         console.error('Error fetching resources:', error);
+        res.status(500).json({
+            message: 'Failed to fetch resources',
+            error: error.message
+        });
+    }
+});
+
+// Add endpoint to get tags
+app.get('/api/tags', async (req, res) => {
+    try {
+        const [rows] = await db.execute('SELECT * FROM tags');
+        res.json(rows);
+    } catch (error) {
+        console.error('Error fetching tags:', error);
+        res.status(500).json({
+            message: 'Failed to fetch tags',
+            error: error.message
+        });
+    }
+});
+
+// Add endpoint to get resources by category
+app.get('/api/categories/:categoryId/resources', async (req, res) => {
+    try {
+        const [rows] = await db.execute(`
+            SELECT 
+                r.*,
+                c.name as category_name,
+                c.icon as category_icon,
+                GROUP_CONCAT(t.name) as tags
+            FROM resources r
+            LEFT JOIN categories c ON r.category_id = c.id
+            LEFT JOIN resource_tags rt ON r.id = rt.resource_id
+            LEFT JOIN tags t ON rt.tag_id = t.id
+            WHERE r.category_id = ?
+            GROUP BY r.id
+        `, [req.params.categoryId]);
+
+        const formattedResources = rows.map(resource => ({
+            ...resource,
+            tags: resource.tags ? resource.tags.split(',') : []
+        }));
+
+        res.json(formattedResources);
+    } catch (error) {
+        console.error('Error fetching resources by category:', error);
         res.status(500).json({
             message: 'Failed to fetch resources',
             error: error.message

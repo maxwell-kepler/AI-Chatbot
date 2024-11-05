@@ -2,7 +2,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
     View,
-    Text,
     ScrollView,
     TextInput,
     RefreshControl,
@@ -128,22 +127,15 @@ const ResourcesScreen = () => {
                     }
                 >
                     {filteredResources.map((resource) => {
-                        // Find the category for this resource
                         const category = categories.find(cat => cat.id === resource.category_id);
+                        console.log('Category found:', category); // Debug log
 
                         return (
                             <ResourceCard
                                 key={resource.id}
                                 resource={{
-                                    id: resource.id,
-                                    name: resource.name,
-                                    description: resource.description,
-                                    phone: resource.phone,
-                                    address: resource.address,
-                                    website: resource.website,
-                                    hours: resource.hours,
-                                    categoryId: resource.category_id,
-                                    categoryName: category ? category.name : 'General'
+                                    ...resource,
+                                    category_name: category ? category.name : 'Unknown Category'
                                 }}
                             />
                         );
