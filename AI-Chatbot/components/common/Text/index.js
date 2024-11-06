@@ -1,12 +1,13 @@
-// components/common/Text/index.js
+// src/components/common/Text/index.js
 import React from 'react';
 import { Text as RNText } from 'react-native';
-import { createTextStyle } from '../../../styles/utilities';
+import { theme } from '../../../styles/theme';
 
 const Text = ({ preset = 'body1', style, children, ...props }) => {
-    const textStyle = createTextStyle(preset, style);
+    const baseStyle = theme.typography.presets[preset] || theme.typography.presets.body1;
+
     return (
-        <RNText style={textStyle} {...props}>
+        <RNText style={[baseStyle, style]} {...props}>
             {children}
         </RNText>
     );
