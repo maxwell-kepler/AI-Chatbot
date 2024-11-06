@@ -1,25 +1,13 @@
 // src/styles/utilities.js
-import { Platform, PixelRatio } from 'react-native';
+import { Platform, PixelRatio, Dimensions } from 'react-native';
 import { theme } from './theme';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // Scale font size based on screen size
 export const scaleFontSize = (size) => {
     const scale = PixelRatio.getFontScale();
     return Math.round(size * scale);
-};
-
-// Combine typography presets with custom styles
-export const createTextStyle = (preset, customStyles = {}) => {
-    const baseStyle = theme.typography.presets[preset] || theme.typography.presets.body1;
-    return {
-        ...baseStyle,
-        ...customStyles,
-    };
-};
-
-// Create shadow styles based on elevation
-export const createShadow = (elevation = 'base') => {
-    return theme.shadows[elevation] || theme.shadows.base;
 };
 
 // Create spacing helper
@@ -44,9 +32,14 @@ export const createSpacing = (...args) => {
     return spacing;
 };
 
+// Create shadow styles based on elevation
+export const createShadow = (elevation = 'base') => {
+    return theme.shadows[elevation] || theme.shadows.base;
+};
+
 // Helper for responsive styles
 export const responsive = {
-    isSmallDevice: width < 375,
-    isMediumDevice: width >= 375 && width < 768,
-    isLargeDevice: width >= 768,
+    isSmallDevice: SCREEN_WIDTH < 375,
+    isMediumDevice: SCREEN_WIDTH >= 375 && SCREEN_WIDTH < 768,
+    isLargeDevice: SCREEN_WIDTH >= 768,
 };

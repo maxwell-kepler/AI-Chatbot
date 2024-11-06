@@ -2,7 +2,10 @@
 import {
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
-    sendPasswordResetEmail
+    sendPasswordResetEmail,
+    EmailAuthProvider,
+    reauthenticateWithCredential,
+    updatePassword
 } from 'firebase/auth';
 import { auth } from '../../config/firebase';
 
@@ -111,6 +114,84 @@ class AuthService {
 
     signOut() {
         return auth.signOut();
+    }
+
+    async resetPassword(currentPassword, newPassword) {
+        try {
+            const user = auth.currentUser;
+
+            if (!user || !user.email) {
+                return {
+                    success: false,
+                    error: 'No authenticated user found'
+                };
+            }
+
+            // First, reauthenticate the user
+            const credential = EmailAuthProvider.credential(
+                user.email,
+                currentPassword
+            );
+
+            try {
+                await reauthenticateWithCredential(user, credential);
+            } catch (error) {
+                console.error('Reauthentication error:', error);
+
+                switch (error.code) {
+                    case 'auth/wrong-password':
+                        return {
+                            success: false,
+                            error: 'Current password is incorrect'
+                        };
+                    case 'auth/too-many-requests':
+                        return {
+                            success: false,
+                            error: 'Too many attempts. Please try again later'
+                        };
+                    default:
+                        return {
+                            success: false,
+                            error: 'Failed to authenticate. Please try again'
+                        };
+                }
+            }
+
+            // Then update the password
+            try {
+                await updatePassword(user, newPassword);
+                return {
+                    success: true,
+                    message: 'Password updated successfully'
+                };
+            } catch (error) {
+                console.error('Password update error:', error);
+
+                switch (error.code) {
+                    case 'auth/weak-password':
+                        return {
+                            success: false,
+                            error: 'Password is too weak. Please choose a stronger password'
+                        };
+                    case 'auth/requires-recent-login':
+                        return {
+                            success: false,
+                            error: 'Please log in again before changing your password'
+                        };
+                    default:
+                        return {
+                            success: false,
+                            error: 'Failed to update password. Please try again'
+                        };
+                }
+            }
+        } catch (error) {
+            console.error('Reset password error:', error);
+            return {
+                success: false,
+                error: 'An unexpected error occurred'
+            };
+        }
     }
 }
 
