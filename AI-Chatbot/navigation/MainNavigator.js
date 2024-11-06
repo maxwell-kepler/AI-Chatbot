@@ -5,10 +5,12 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import {
     MessageCircle,
     Library,
+    Settings,
 } from 'lucide-react-native';
 import { theme } from '../styles/theme';
 import ChatScreen from '../screens/chat/ChatScreen';
 import ResourcesScreen from '../screens/resources/ResourcesScreen';
+import SettingsScreen from '../screens/settings/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -55,6 +57,28 @@ const ResourcesStack = () => (
     </Stack.Navigator>
 );
 
+const SettingsStack = () => (
+    <Stack.Navigator
+        screenOptions={{
+            headerStyle: {
+                backgroundColor: theme.colors.neutral.white,
+            },
+            headerTintColor: theme.colors.primary.main,
+            headerTitleStyle: {
+                ...theme.typography.presets.header3,
+            },
+            headerShadowVisible: false,
+        }}
+    >
+        <Stack.Screen
+            name="SettingsMain"
+            component={SettingsScreen}
+            options={{ title: 'Settings' }}
+        />
+    </Stack.Navigator>
+);
+
+
 const MainNavigator = () => {
     return (
         <Tab.Navigator
@@ -90,6 +114,15 @@ const MainNavigator = () => {
                 options={{
                     tabBarIcon: ({ color, size }) => (
                         <Library size={size} color={color} />
+                    ),
+                }}
+            />
+            <Tab.Screen
+                name="Settings"
+                component={SettingsStack}
+                options={{
+                    tabBarIcon: ({ color, size }) => (
+                        <Settings size={size} color={color} />
                     ),
                 }}
             />
