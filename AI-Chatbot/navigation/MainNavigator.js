@@ -6,13 +6,15 @@ import {
     MessageCircle,
     Library,
     Settings,
-    Activity
+    Activity,
+    PocketKnife,
 } from 'lucide-react-native';
 import { theme } from '../styles/theme';
 import ChatScreen from '../screens/chat/ChatScreen';
 import ResourcesScreen from '../screens/resources/ResourcesScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
 import TrackingScreen from '../screens/tracking/TrackingScreen';
+import BreathingScreen from '../screens/tools/BreathingScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -34,6 +36,47 @@ const ChatStack = () => (
             name="ChatMain"
             component={ChatScreen}
             options={{ title: 'AI Support' }}
+        />
+    </Stack.Navigator>
+);
+
+const TrackingStack = () => (
+    <Stack.Navigator
+        screenOptions={{
+            headerStyle: {
+                backgroundColor: theme.colors.neutral.white,
+            },
+            headerTintColor: theme.colors.primary.main,
+            headerTitleStyle: {
+                ...theme.typography.presets.header3,
+            },
+            headerShadowVisible: false,
+        }}
+    >
+        <Stack.Screen
+            name="TrackingMain"
+            component={TrackingScreen}
+            options={{ title: 'Mood Tracking' }}
+        />
+    </Stack.Navigator>
+);
+
+const ToolsStack = () => (
+    <Stack.Navigator 
+    screenOptions={{
+        headerStyle: {
+            backgroundColor: theme.colors.neutral.white,
+        },
+        headerTintColor: theme.colors.primary.main,
+        headerTitleStyle: {
+            ...theme.typography.presets.header3,
+        },
+        headerShadowVisible: false,
+    }}>
+         <Stack.Screen
+            name="ToolsMain"
+            component={BreathingScreen}
+            options={{ title: 'Tools' }}
         />
     </Stack.Navigator>
 );
@@ -80,26 +123,6 @@ const SettingsStack = () => (
     </Stack.Navigator>
 );
 
-const TrackingStack = () => (
-    <Stack.Navigator
-        screenOptions={{
-            headerStyle: {
-                backgroundColor: theme.colors.neutral.white,
-            },
-            headerTintColor: theme.colors.primary.main,
-            headerTitleStyle: {
-                ...theme.typography.presets.header3,
-            },
-            headerShadowVisible: false,
-        }}
-    >
-        <Stack.Screen
-            name="TrackingMain"
-            component={TrackingScreen}
-            options={{ title: 'Mood Tracking' }}
-        />
-    </Stack.Navigator>
-);
 
 
 const MainNavigator = () => {
@@ -137,6 +160,15 @@ const MainNavigator = () => {
                 options={{
                     tabBarIcon: ({ color, size }) => (
                         <Activity size={size} color={color} />
+                    ),
+                }}
+            />
+            <Tab.Screen
+                name="Tools"
+                component={ToolsStack}
+                options={{
+                    tabBarIcon: ({ color, size }) => (
+                        <PocketKnife size={size} color={color} />
                     ),
                 }}
             />
