@@ -6,6 +6,7 @@ import { theme } from '../../../styles/theme';
 import Button, { BUTTON_VARIANTS } from '../../../components/common/Button';
 import ResetPasswordModal from '../../../components/specific/Settings/ResetPasswordModal';
 import styles from './styles';
+import authService from '../../../services/auth/authService';
 
 const SettingsScreen = () => {
     const [resetPasswordVisible, setResetPasswordVisible] = useState(false);
