@@ -44,7 +44,7 @@ This is a React Native mobile application that provides AI-powered mental health
 
 1. Clone the repository
 ```bash
-git clone [https://github.com/maxwell-kepler/AI-Chatbot.git]
+git clone https://github.com/maxwell-kepler/AI-Chatbot.git
 ```
 
 2. Install dependencies
@@ -60,7 +60,7 @@ GOOGLE_CLOUD_PROJECT=your_project_id
 FIREBASE_CONFIG=your_firebase_config
 ```
 
-Modify the a `database.js` file in the `config` directory:
+4. Modify the a `database.js` file in the `config` directory:
 ```
 const dbConfig = {
     host: 'localhost',
@@ -73,7 +73,7 @@ const dbConfig = {
 };
 ```
 
-Modify the `firebase.js` file in the `config` directory:
+5. Modify the `firebase.js` file in the `config` directory:
 ```
 const firebaseConfig = {
     apiKey: "your_api_key",
@@ -87,7 +87,7 @@ const firebaseConfig = {
 };
 ```
 
-4. Start the development server
+6. Start the development server
 ```bash
 npx expo start
 ```
