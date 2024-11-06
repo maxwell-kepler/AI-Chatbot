@@ -9,10 +9,30 @@ export default StyleSheet.create({
         padding: theme.spacing.layout.page,
     },
     section: {
-        marginBottom: theme.spacing.lg,
+        marginBottom: theme.spacing.xl,
+        backgroundColor: theme.colors.neutral.white,
+        borderRadius: theme.borderRadius.lg,
+        padding: theme.spacing.lg,
+        ...theme.shadows.sm,
+    },
+    sectionHeader: {
+        marginBottom: theme.spacing.md,
+    },
+    sectionTitle: {
+        color: theme.colors.neutral.grey700,
+    },
+    button: {
+        marginBottom: theme.spacing.md,
     },
     dangerSection: {
         marginTop: 'auto',
-        marginBottom: theme.spacing.xl,
+        backgroundColor: theme.colors.neutral.white,
+        borderRadius: theme.borderRadius.lg,
+        padding: theme.spacing.lg,
+        ...theme.shadows.sm,
+    },
+    // Remove margin bottom from last button in each section
+    'button:last-child': {
+        marginBottom: 0,
     },
 });
