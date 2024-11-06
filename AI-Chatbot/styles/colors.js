@@ -61,5 +61,24 @@ export const colors = {
         black50: 'rgba(0, 0, 0, 0.5)',
         white50: 'rgba(255, 255, 255, 0.5)',
         white70: 'rgba(255, 255, 255, 0.7)',
+    },
+
+    pastels: {
+        rose: '#FFB5C2',      // Soft pink
+        mint: '#98E4D6',      // Mint green
+        lavender: '#D4B5FF',  // Light purple
+        peach: '#FFCEB5',     // Soft orange
+        sky: '#B5E4FF',       // Light blue
+        lemon: '#FFF4B5',     // Soft yellow
+        lilac: '#E4B5FF',     // Light violet
+        sage: '#C2D6B5',      // Soft green
+        coral: '#FFB5B5',     // Soft red
+        periwinkle: '#B5B5FF', // Soft blue-violet
+        honeydew: '#B5FFB5',   // Very light green
+        blush: '#FFD6D6',      // Light pink
+        powder: '#D6E4FF',     // Powder blue
+        banana: '#FFE4B5',     // Light yellow
+        pistachio: '#D6FFB5',  // Light yellowish-green
+        mauve: '#E4B5D6'       // Soft purple-pink
     }
 };

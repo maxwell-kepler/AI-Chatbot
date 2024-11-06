@@ -6,14 +6,13 @@ import {
     MessageCircle,
     Library,
     Settings,
-    LineChart,
     Activity
 } from 'lucide-react-native';
 import { theme } from '../styles/theme';
 import ChatScreen from '../screens/chat/ChatScreen';
 import ResourcesScreen from '../screens/resources/ResourcesScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
-import TrackingScreen from '../screens/mood/TrackingScreen';
+import TrackingScreen from '../screens/tracking/TrackingScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
