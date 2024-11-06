@@ -6,11 +6,13 @@ import {
     MessageCircle,
     Library,
     Settings,
+    Activity
 } from 'lucide-react-native';
 import { theme } from '../styles/theme';
 import ChatScreen from '../screens/chat/ChatScreen';
 import ResourcesScreen from '../screens/resources/ResourcesScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
+import TrackingScreen from '../screens/tracking/TrackingScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -78,6 +80,27 @@ const SettingsStack = () => (
     </Stack.Navigator>
 );
 
+const TrackingStack = () => (
+    <Stack.Navigator
+        screenOptions={{
+            headerStyle: {
+                backgroundColor: theme.colors.neutral.white,
+            },
+            headerTintColor: theme.colors.primary.main,
+            headerTitleStyle: {
+                ...theme.typography.presets.header3,
+            },
+            headerShadowVisible: false,
+        }}
+    >
+        <Stack.Screen
+            name="TrackingMain"
+            component={TrackingScreen}
+            options={{ title: 'Mood Tracking' }}
+        />
+    </Stack.Navigator>
+);
+
 
 const MainNavigator = () => {
     return (
@@ -105,6 +128,15 @@ const MainNavigator = () => {
                 options={{
                     tabBarIcon: ({ color, size }) => (
                         <MessageCircle size={size} color={color} />
+                    ),
+                }}
+            />
+            <Tab.Screen
+                name="Tracking"
+                component={TrackingStack}
+                options={{
+                    tabBarIcon: ({ color, size }) => (
+                        <Activity size={size} color={color} />
                     ),
                 }}
             />

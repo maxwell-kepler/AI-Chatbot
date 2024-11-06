@@ -1,3 +1,4 @@
+// src/screens/chat/ChatScreen/styles.js
 import { StyleSheet, Platform } from 'react-native';
 import { theme } from '../../../styles/theme';
 
@@ -8,6 +9,7 @@ export default StyleSheet.create({
     },
     chatContainer: {
         flex: 1,
+        justifyContent: 'space-between',
     },
     messagesContainer: {
         flex: 1,
@@ -21,13 +23,8 @@ export default StyleSheet.create({
         alignItems: 'center',
     },
     inputWrapper: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: theme.colors.neutral.white,
         borderTopWidth: 1,
         borderTopColor: theme.colors.neutral.grey200,
-        paddingBottom: Platform.OS === 'ios' ? theme.spacing.xl : 0,
+        backgroundColor: theme.colors.neutral.white,
     },
 });

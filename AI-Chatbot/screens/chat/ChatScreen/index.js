@@ -4,6 +4,10 @@ import {
     View,
     ScrollView,
     ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    Keyboard,
+    TouchableWithoutFeedback,
 } from 'react-native';
 import { theme } from '../../../styles/theme';
 import ChatBubble from '../../../components/specific/Chat/ChatBubble';
@@ -22,10 +26,32 @@ const ChatScreen = () => {
     const [messages, setMessages] = useState([INITIAL_MESSAGE]);
     const [loading, setLoading] = useState(false);
     const scrollViewRef = useRef(null);
+    const keyboardDidShowListener = useRef(null);
+    const keyboardDidHideListener = useRef(null);
+
+    useEffect(() => {
+        // Set up keyboard listeners
+        keyboardDidShowListener.current = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+            () => scrollToBottom(true)
+        );
+        keyboardDidHideListener.current = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+            () => scrollToBottom(true)
+        );
+
+        // Cleanup listeners
+        return () => {
+            keyboardDidShowListener.current?.remove();
+            keyboardDidHideListener.current?.remove();
+        };
+    }, []);
 
     const scrollToBottom = (animated = true) => {
         if (scrollViewRef.current) {
-            scrollViewRef.current.scrollToEnd({ animated });
+            setTimeout(() => {
+                scrollViewRef.current.scrollToEnd({ animated });
+            }, 100); // Small delay to ensure content is laid out
         }
     };
 
@@ -38,6 +64,7 @@ const ChatScreen = () => {
 
         setMessages(prev => [...prev, newMessage]);
         setLoading(true);
+        scrollToBottom();
 
         try {
             const response = await chatWithGemini(message);
@@ -49,6 +76,7 @@ const ChatScreen = () => {
             };
 
             setMessages(prev => [...prev, aiResponse]);
+            scrollToBottom();
         } catch (error) {
             console.error('Chat error:', error);
             const errorMessage = {
@@ -60,43 +88,51 @@ const ChatScreen = () => {
             setMessages(prev => [...prev, errorMessage]);
         } finally {
             setLoading(false);
+            scrollToBottom();
         }
     };
 
     return (
-        <View style={styles.container}>
-            <View style={styles.chatContainer}>
-                <ScrollView
-                    ref={scrollViewRef}
-                    style={styles.messagesContainer}
-                    contentContainerStyle={styles.messagesContent}
-                    onContentSizeChange={() => scrollToBottom()}
-                    keyboardShouldPersistTaps="handled"
-                >
-                    {messages.map((message, index) => (
-                        <ChatBubble
-                            key={index}
-                            message={message.text}
-                            isUser={message.isUser}
-                            timestamp={message.timestamp}
-                            showTimestamp={true}
-                        />
-                    ))}
-                    {loading && (
-                        <View style={styles.loadingContainer}>
-                            <ActivityIndicator color={theme.colors.primary.main} />
-                        </View>
-                    )}
-                </ScrollView>
-            </View>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.container}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        >
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <View style={styles.chatContainer}>
+                    <ScrollView
+                        ref={scrollViewRef}
+                        style={styles.messagesContainer}
+                        contentContainerStyle={styles.messagesContent}
+                        keyboardShouldPersistTaps="handled"
+                        onContentSizeChange={() => scrollToBottom(false)}
+                        onLayout={() => scrollToBottom(false)}
+                    >
+                        {messages.map((message, index) => (
+                            <ChatBubble
+                                key={index}
+                                message={message.text}
+                                isUser={message.isUser}
+                                timestamp={message.timestamp}
+                                showTimestamp={true}
+                            />
+                        ))}
+                        {loading && (
+                            <View style={styles.loadingContainer}>
+                                <ActivityIndicator color={theme.colors.primary.main} />
+                            </View>
+                        )}
+                    </ScrollView>
 
-            <View style={styles.inputWrapper}>
-                <MessageInput
-                    onSend={handleSend}
-                    disabled={loading}
-                />
-            </View>
-        </View>
+                    <View style={styles.inputWrapper}>
+                        <MessageInput
+                            onSend={handleSend}
+                            disabled={loading}
+                        />
+                    </View>
+                </View>
+            </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
     );
 };
 
