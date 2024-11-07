@@ -1,4 +1,3 @@
-//src/server.js
 const express = require('express');
 const cors = require('cors');
 const db = require('./config/database');
@@ -21,7 +20,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// Test endpoint - NOTE: This should be defined BEFORE any route prefixes
+// Test endpoint
 app.get('/api/test', (req, res) => {
     console.log('Test endpoint hit');
     res.json({
@@ -34,7 +33,7 @@ app.get('/api/test', (req, res) => {
 app.get('/api/users', async (req, res) => {
     try {
         const [rows] = await db.execute(
-            'SELECT user_id, email, username, first_name, last_name, created_at FROM users ORDER BY created_at DESC'
+            'SELECT user_ID, name, create_at, last_login, firebase_ID FROM Users ORDER BY create_at DESC'
         );
         res.json(rows);
     } catch (error) {
@@ -46,10 +45,11 @@ app.get('/api/users', async (req, res) => {
     }
 });
 
+// Get all categories
 app.get('/api/categories', async (req, res) => {
     try {
         const [rows] = await db.execute(
-            'SELECT * FROM categories'
+            'SELECT category_ID, name, icon FROM Categories'
         );
         res.json(rows);
     } catch (error) {
@@ -61,6 +61,7 @@ app.get('/api/categories', async (req, res) => {
     }
 });
 
+// Get all resources with tags and category info
 app.get('/api/resources', async (req, res) => {
     try {
         const [rows] = await db.execute(`
@@ -69,12 +70,12 @@ app.get('/api/resources', async (req, res) => {
                 c.name as category_name,
                 c.icon as category_icon,
                 GROUP_CONCAT(DISTINCT t.name) as tags
-            FROM resources r
-            LEFT JOIN categories c ON r.category_id = c.id
-            LEFT JOIN resource_tags rt ON r.id = rt.resource_id
-            LEFT JOIN tags t ON rt.tag_id = t.id
-            GROUP BY r.id, r.name, r.description, r.category_id, 
-                     r.phone, r.address, r.hours, r.website,
+            FROM Resources r
+            LEFT JOIN Categories c ON r.category_ID = c.category_ID
+            LEFT JOIN Used_In ui ON r.resource_ID = ui.resource_ID
+            LEFT JOIN Tags t ON ui.tag_ID = t.tag_ID
+            GROUP BY r.resource_ID, r.name, r.description, r.category_ID, 
+                     r.phone, r.address, r.hours, r.website_URL,
                      c.name, c.icon
         `);
 
@@ -94,10 +95,10 @@ app.get('/api/resources', async (req, res) => {
     }
 });
 
-// Add endpoint to get tags
+// Get all tags
 app.get('/api/tags', async (req, res) => {
     try {
-        const [rows] = await db.execute('SELECT * FROM tags');
+        const [rows] = await db.execute('SELECT tag_ID, name FROM Tags');
         res.json(rows);
     } catch (error) {
         console.error('Error fetching tags:', error);
@@ -108,7 +109,7 @@ app.get('/api/tags', async (req, res) => {
     }
 });
 
-// Add endpoint to get resources by category
+// Get resources by category
 app.get('/api/categories/:categoryId/resources', async (req, res) => {
     try {
         const [rows] = await db.execute(`
@@ -117,12 +118,12 @@ app.get('/api/categories/:categoryId/resources', async (req, res) => {
                 c.name as category_name,
                 c.icon as category_icon,
                 GROUP_CONCAT(t.name) as tags
-            FROM resources r
-            LEFT JOIN categories c ON r.category_id = c.id
-            LEFT JOIN resource_tags rt ON r.id = rt.resource_id
-            LEFT JOIN tags t ON rt.tag_id = t.id
-            WHERE r.category_id = ?
-            GROUP BY r.id
+            FROM Resources r
+            LEFT JOIN Categories c ON r.category_ID = c.category_ID
+            LEFT JOIN Used_In ui ON r.resource_ID = ui.resource_ID
+            LEFT JOIN Tags t ON ui.tag_ID = t.tag_ID
+            WHERE r.category_ID = ?
+            GROUP BY r.resource_ID
         `, [req.params.categoryId]);
 
         const formattedResources = rows.map(resource => ({
@@ -140,31 +141,42 @@ app.get('/api/categories/:categoryId/resources', async (req, res) => {
     }
 });
 
-
 // Create new user
 app.post('/api/users', async (req, res) => {
     try {
-        const { email, password, username, firstName, lastName } = req.body;
+        const { email, password, name } = req.body;
 
         // Validation
-        if (!email || !password || !username) {
+        if (!email || !password || !name) {
             return res.status(400).json({
                 message: 'Missing required fields',
-                required: ['email', 'password', 'username'],
-                received: { email, username }
+                required: ['email', 'password', 'name'],
+                received: { email, name }
             });
         }
 
-        // Create user
-        const [result] = await db.execute(
-            'INSERT INTO users (user_id, email, password_hash, username, first_name, last_name) VALUES (UUID(), ?, ?, ?, ?, ?)',
-            [email, password, username, firstName, lastName]
+        // First create Firebase login entry
+        const [firebaseResult] = await db.execute(
+            'INSERT INTO Firebase_Login (ID, email, password) VALUES (UUID(), ?, ?)',
+            [email, password]
+        );
+
+        // Get the generated Firebase ID
+        const [firebaseUser] = await db.execute(
+            'SELECT ID FROM Firebase_Login WHERE email = ?',
+            [email]
+        );
+
+        // Create user with Firebase reference
+        const [userResult] = await db.execute(
+            'INSERT INTO Users (user_ID, name, create_at, firebase_ID) VALUES (UUID(), ?, CURRENT_TIMESTAMP, ?)',
+            [name, firebaseUser[0].ID]
         );
 
         // Fetch created user
         const [users] = await db.execute(
-            'SELECT user_id, email, username, first_name, last_name, created_at FROM users WHERE email = ?',
-            [email]
+            'SELECT user_ID, name, create_at, firebase_ID FROM Users WHERE firebase_ID = ?',
+            [firebaseUser[0].ID]
         );
 
         res.status(201).json({
@@ -194,7 +206,10 @@ app.use((err, req, res, next) => {
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`\nServer running on http://0.0.0.0:${PORT}`);
     console.log('Available endpoints:');
-    console.log('- GET  /api/test');
     console.log('- GET  /api/users');
+    console.log('- GET  /api/categories');
+    console.log('- GET  /api/resources');
+    console.log('- GET  /api/tags');
+    console.log('- GET  /api/categories/:categoryId/resources');
     console.log('- POST /api/users');
 });
