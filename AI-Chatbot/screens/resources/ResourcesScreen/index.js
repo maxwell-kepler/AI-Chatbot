@@ -65,7 +65,7 @@ const ResourcesScreen = () => {
     const filteredResources = resources.filter(resource => {
         const matchesSearch = resource.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             resource.description.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesCategory = !selectedCategory || resource.category_id === selectedCategory;
+        const matchesCategory = !selectedCategory || resource.category_ID === selectedCategory;
         return matchesSearch && matchesCategory;
     });
 
@@ -102,14 +102,14 @@ const ResourcesScreen = () => {
                 >
                     {categories.map((category) => (
                         <CategoryPill
-                            key={category.id}
+                            key={category.category_ID}
                             category={{
-                                id: category.id,
+                                id: category.category_ID,
                                 name: category.name,
                                 icon: category.icon
                             }}
-                            isSelected={selectedCategory === category.id}
-                            onSelect={() => handleCategorySelect(category.id)}
+                            isSelected={selectedCategory === category.category_ID}
+                            onSelect={() => handleCategorySelect(category.category_ID)}
                         />
                     ))}
                 </ScrollView>
@@ -127,15 +127,14 @@ const ResourcesScreen = () => {
                     }
                 >
                     {filteredResources.map((resource) => {
-                        const category = categories.find(cat => cat.id === resource.category_id);
+                        const category = categories.find(cat => cat.category_ID === resource.category_ID);
 
                         return (
                             <ResourceCard
-                                key={resource.id}
+                                key={resource.resource_ID}
                                 resource={{
                                     ...resource,
                                     category_name: category ? category.name : 'Unknown Category',
-                                    // No need to process tags as they're already an array from the server
                                 }}
                             />
                         );

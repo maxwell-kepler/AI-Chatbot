@@ -11,7 +11,10 @@ export const resourceService = {
             }
 
             const data = await response.json();
-            return data;
+            return data.map(category => ({
+                ...category,
+                id: category.category_ID
+            }));
         } catch (error) {
             console.error('Error fetching categories:', error);
             throw error;
@@ -26,7 +29,10 @@ export const resourceService = {
             }
 
             const data = await response.json();
-            return data;
+            return data.map(resource => ({
+                ...resource,
+                id: resource.resource_ID
+            }));
         } catch (error) {
             console.error('Error fetching resources:', error);
             throw error;

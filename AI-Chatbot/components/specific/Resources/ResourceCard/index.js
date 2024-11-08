@@ -12,7 +12,7 @@ const ResourceCard = ({ resource }) => {
     };
 
     const handleWebsitePress = () => {
-        Linking.openURL(resource.website);
+        Linking.openURL(resource.website_URL);
     };
 
     // Filter out any tags that match the category name
