@@ -8,15 +8,92 @@ import {
     updatePassword
 } from 'firebase/auth';
 import { auth } from '../../config/firebase';
+import { userService } from '../database/userService';
 
 class AuthService {
+    async createAccount(email, password) {
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const firebaseUser = userCredential.user;
+
+            try {
+                await userService.createUser({
+                    firebaseId: firebaseUser.uid,
+                    email: firebaseUser.email,
+                    name: email.split('@')[0], // Default name from email
+                    createAt: new Date().toISOString(),
+                    lastLogin: new Date().toISOString()
+                });
+
+                return {
+                    success: true,
+                    user: firebaseUser
+                };
+            } catch (dbError) {
+                // If MySQL creation fails, delete the Firebase user
+                console.error('Failed to create MySQL user:', dbError);
+                await firebaseUser.delete();
+                throw new Error('Failed to create user in database');
+            }
+        } catch (error) {
+            let errorMessage = 'Failed to create account';
+
+            switch (error.code) {
+                case 'auth/email-already-in-use':
+                    errorMessage = 'An account already exists with this email';
+                    break;
+                case 'auth/invalid-email':
+                    errorMessage = 'Invalid email address format';
+                    break;
+                case 'auth/operation-not-allowed':
+                    errorMessage = 'Email/password accounts are not enabled';
+                    break;
+                case 'auth/weak-password':
+                    errorMessage = 'Password should be at least 6 characters';
+                    break;
+                default:
+                    errorMessage = error.message;
+            }
+
+            return {
+                success: false,
+                error: errorMessage
+            };
+        }
+    }
+
     async signIn(email, password) {
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            return {
-                success: true,
-                user: userCredential.user
-            };
+            const firebaseUser = userCredential.user;
+
+            try {
+                const dbUser = await userService.getUserByFirebaseId(firebaseUser.uid);
+
+                if (!dbUser.success) {
+                    // If no MySQL user exists, create one (recovery mechanism)
+                    await userService.createUser({
+                        firebaseId: firebaseUser.uid,
+                        email: firebaseUser.email,
+                        name: email.split('@')[0],
+                        createAt: new Date().toISOString(),
+                        lastLogin: new Date().toISOString()
+                    });
+                } else {
+                    await userService.updateLastLogin(firebaseUser.uid);
+                }
+
+                return {
+                    success: true,
+                    user: firebaseUser
+                };
+            } catch (dbError) {
+                console.error('Database error during sign in:', dbError);
+                return {
+                    success: false,
+                    error: 'Failed to sync user data'
+                };
+            }
         } catch (error) {
             let errorMessage = 'Failed to sign in';
 
@@ -35,40 +112,6 @@ class AuthService {
                     break;
                 case 'auth/too-many-requests':
                     errorMessage = 'Too many failed attempts. Please try again later';
-                    break;
-                default:
-                    errorMessage = error.message;
-            }
-
-            return {
-                success: false,
-                error: errorMessage
-            };
-        }
-    }
-
-    async createAccount(email, password) {
-        try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            return {
-                success: true,
-                user: userCredential.user
-            };
-        } catch (error) {
-            let errorMessage = 'Failed to create account';
-
-            switch (error.code) {
-                case 'auth/email-already-in-use':
-                    errorMessage = 'An account already exists with this email';
-                    break;
-                case 'auth/invalid-email':
-                    errorMessage = 'Invalid email address format';
-                    break;
-                case 'auth/operation-not-allowed':
-                    errorMessage = 'Email/password accounts are not enabled';
-                    break;
-                case 'auth/weak-password':
-                    errorMessage = 'Password should be at least 6 characters';
                     break;
                 default:
                     errorMessage = error.message;
@@ -112,8 +155,17 @@ class AuthService {
         }
     }
 
-    signOut() {
-        return auth.signOut();
+    async signOut() {
+        try {
+            const currentUser = auth.currentUser;
+            if (currentUser) {
+                await userService.updateLastLogin(currentUser.uid);
+            }
+            return auth.signOut();
+        } catch (error) {
+            console.error('Error during sign out:', error);
+            throw error;
+        }
     }
 
     async resetPassword(currentPassword, newPassword) {
@@ -127,7 +179,6 @@ class AuthService {
                 };
             }
 
-            // First, reauthenticate the user
             const credential = EmailAuthProvider.credential(
                 user.email,
                 currentPassword
@@ -157,7 +208,6 @@ class AuthService {
                 }
             }
 
-            // Then update the password
             try {
                 await updatePassword(user, newPassword);
                 return {

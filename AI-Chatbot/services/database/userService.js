@@ -1,116 +1,82 @@
 // services/database/userService.js
-import {
-    Platform,
-} from 'react-native';
-
 import { API_URL } from "../../config/api";
 
 export const userService = {
-    fetchUsers: async () => {
-        try {
-            console.log('Fetching users from:', `${API_URL}/users`);
-
-            const response = await fetch(`${API_URL}/users`);
-            console.log('Response status:', response.status);
-            console.log('Response headers:', response.headers);
-
-            // Log the raw response text first
-            const text = await response.text();
-            console.log('Raw response:', text);
-
-            // Try to parse as JSON
-            let data;
-            try {
-                data = JSON.parse(text);
-            } catch (parseError) {
-                console.error('JSON parse error:', parseError);
-                throw new Error('Invalid JSON response from server');
-            }
-
-            console.log('Parsed data:', data);
-            return data;
-        } catch (error) {
-            console.error('Detailed error:', {
-                message: error.message,
-                stack: error.stack,
-                platform: Platform.OS
-            });
-            throw error;
-        }
-    },
-    testConnection: async () => {
-        try {
-            console.log('Testing connection to:', `${API_URL}/test`);
-
-            const response = await fetch(`${API_URL}/test`);
-            console.log('Response status:', response.status);
-            console.log('Response headers:', response.headers);
-
-            const text = await response.text();
-            console.log('Raw test response:', text);
-
-            // Try to parse as JSON
-            let data;
-            try {
-                data = JSON.parse(text);
-            } catch (parseError) {
-                console.error('JSON parse error:', parseError);
-                throw new Error('Invalid JSON response from server');
-            }
-
-            console.log('Parsed data:', data);
-            return data;
-        } catch (error) {
-            console.error('Connection test failed:', {
-                message: error.message,
-                stack: error.stack
-            });
-            throw error;
-        }
-    },
     createUser: async (userData) => {
         try {
-            console.log('Sending request to:', `${API_URL}/users`);
-            console.log('With data:', userData);
-
             const response = await fetch(`${API_URL}/users`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json',
                 },
                 body: JSON.stringify(userData)
             });
 
-            console.log('Response status:', response.status);
-            console.log('Response headers:', response.headers);
-
-            // Log raw response first
-            const text = await response.text();
-            console.log('Raw response:', text);
-
-            // Try to parse JSON
-            let data;
-            try {
-                data = JSON.parse(text);
-            } catch (parseError) {
-                console.error('JSON parse error:', parseError);
-                throw new Error('Invalid JSON response from server');
+            if (!response.ok) {
+                throw new Error('Failed to create user');
             }
 
-            console.log('Parsed response:', data);
-
-            /*if (!response.ok) {
-                throw new Error(data.message || 'Failed to create user');
-            }*/
-
+            const data = await response.json();
+            return {
+                success: true,
+                user: data
+            };
         } catch (error) {
-            console.error('Error creating user:', {
-                message: error.message,
-                stack: error.stack,
-                platform: Platform.OS
-            });
-            throw error;
+            console.error('Error creating user:', error);
+            return {
+                success: false,
+                error: error.message
+            };
         }
     },
+
+    getUserByFirebaseId: async (firebaseId) => {
+        try {
+            const response = await fetch(`${API_URL}/users/firebase/${firebaseId}`);
+
+            if (!response.ok) {
+                return {
+                    success: false,
+                    error: 'User not found'
+                };
+            }
+
+            const data = await response.json();
+            return {
+                success: true,
+                user: data
+            };
+        } catch (error) {
+            console.error('Error fetching user:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    },
+
+    updateLastLogin: async (firebaseId) => {
+        try {
+            const response = await fetch(`${API_URL}/users/firebase/${firebaseId}/login`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update last login');
+            }
+
+            return {
+                success: true
+            };
+        } catch (error) {
+            console.error('Error updating last login:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
 };
