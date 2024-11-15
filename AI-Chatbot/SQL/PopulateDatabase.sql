@@ -1,3 +1,4 @@
+-- SQL/PopulateDatabase.sql
 USE `mental_health_support`;
 
 -- Insert Firebase login first (since Users depends on it)

@@ -1,4 +1,4 @@
-// src/screens/common/LoadingScreen/styles.js
+// screens/common/LoadingScreen/styles.js
 import { StyleSheet } from 'react-native';
 import { colors } from '../../../styles/colors';
 

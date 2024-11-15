@@ -1,4 +1,4 @@
-// src/screens/common/LoadingScreen/index.js
+// screens/common/LoadingScreen/index.js
 import React from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import styles from './styles';

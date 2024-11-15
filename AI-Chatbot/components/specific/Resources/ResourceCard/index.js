@@ -1,5 +1,4 @@
-// ResourceCard/index.js
-// ResourceCard/index.js
+// components/specific/Resources/ResourceCard/index.js
 import React from 'react';
 import { View, Text, TouchableOpacity, Linking } from 'react-native';
 import { MapPin, Phone, Clock, ExternalLink } from 'lucide-react-native';

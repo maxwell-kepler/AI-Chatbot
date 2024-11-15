@@ -1,4 +1,4 @@
-// src/screens/settings/SettingsScreen/index.js
+// screens/settings/SettingsScreen/index.js
 import React, { useState } from 'react';
 import { View, Alert, Text } from 'react-native';
 import { LogOut, Bell, Trash2, Lock } from 'lucide-react-native';

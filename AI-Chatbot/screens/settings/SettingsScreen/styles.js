@@ -1,4 +1,4 @@
-// src/screens/settings/SettingsScreen/styles.js
+// screens/settings/SettingsScreen/styles.js
 import { StyleSheet } from 'react-native';
 import { theme } from '../../../styles/theme';
 
@@ -31,7 +31,6 @@ export default StyleSheet.create({
         padding: theme.spacing.lg,
         ...theme.shadows.sm,
     },
-    // Remove margin bottom from last button in each section
     'button:last-child': {
         marginBottom: 0,
     },

@@ -1,4 +1,4 @@
-// src/components/specific/Chat/ChatBubble/index.js
+// components/specific/Chat/ChatBubble/index.js
 import React from 'react';
 import { View, Text } from 'react-native';
 import { formatMessageTime } from '../../../../utils/dateUtils';

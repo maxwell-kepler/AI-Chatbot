@@ -1,4 +1,4 @@
-// src/screens/tools/BreathingScreen/styles.js
+// screens/tools/BreathingScreen/styles.js
 import { StyleSheet } from 'react-native';
 import { theme } from '../../../styles/theme';
 

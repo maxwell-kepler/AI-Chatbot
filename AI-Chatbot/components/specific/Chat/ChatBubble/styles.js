@@ -1,4 +1,4 @@
-// src/components/specific/Chat/ChatBubble/styles.js
+// components/specific/Chat/ChatBubble/styles.js
 import { StyleSheet } from 'react-native';
 import { theme } from '../../../../styles/theme';
 

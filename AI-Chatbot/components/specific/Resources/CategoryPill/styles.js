@@ -1,4 +1,4 @@
-// src/components/specific/Resources/CategoryPill/styles.js
+// components/specific/Resources/CategoryPill/styles.js
 import { StyleSheet } from 'react-native';
 import { theme } from '../../../../styles/theme';
 

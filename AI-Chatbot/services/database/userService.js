@@ -1,15 +1,6 @@
-import React, { useState, useEffect } from 'react';
+// services/database/userService.js
 import {
-    View,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    StyleSheet,
-    ScrollView,
     Platform,
-    Alert,
-    ActivityIndicator,
-    RefreshControl
 } from 'react-native';
 
 import { API_URL } from "../../config/api";

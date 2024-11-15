@@ -1,4 +1,4 @@
-// src/screens/chat/ChatScreen/index.js
+// screens/chat/ChatScreen/index.js
 import React, { useState, useRef, useEffect } from 'react';
 import {
     View,

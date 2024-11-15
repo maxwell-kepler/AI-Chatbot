@@ -1,4 +1,4 @@
-// src/config/promptConfig.js
+// config/promptConfig.js
 
 export const MOOD_PATTERNS = {
     // Basic emotional states

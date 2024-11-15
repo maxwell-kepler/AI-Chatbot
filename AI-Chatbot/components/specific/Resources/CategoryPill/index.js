@@ -1,4 +1,4 @@
-// src/components/specific/Resources/CategoryPill/index.js
+// components/specific/Resources/CategoryPill/index.js
 import React from 'react';
 import { TouchableOpacity, Text } from 'react-native';
 import {

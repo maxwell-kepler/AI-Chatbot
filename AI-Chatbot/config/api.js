@@ -1,7 +1,7 @@
-// src/config/api.js
+// config/api.js
 import { Platform } from 'react-native';
 
-const LOCAL_IP = '10.0.0.118'; // Your current IP address
+const LOCAL_IP = '10.0.0.31'; // Your current IP address
 const PORT = '3000';
 
 const getApiUrl = () => {

@@ -1,6 +1,5 @@
-// ResourceCard/styles.js
+// components/specific/Resources/ResourceCard/styles.js
 import { StyleSheet } from 'react-native';
-import { theme } from '../../../../styles/theme';
 
 export default StyleSheet.create({
     container: {

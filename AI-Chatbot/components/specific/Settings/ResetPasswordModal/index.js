@@ -1,4 +1,4 @@
-// src/components/specific/Settings/ResetPasswordModal/index.js
+// components/specific/Settings/ResetPasswordModal/index.js
 import React, { useState } from 'react';
 import {
     View,

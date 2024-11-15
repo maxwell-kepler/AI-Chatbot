@@ -1,4 +1,4 @@
-// src/components/common/Container/index.js
+// components/common/Container/index.js
 import React from 'react';
 import { View } from 'react-native';
 import { createSpacing, createShadow } from '../../../styles/utilities';

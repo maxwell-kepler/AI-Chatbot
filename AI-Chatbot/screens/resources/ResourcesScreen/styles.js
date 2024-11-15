@@ -1,4 +1,4 @@
-// src/screens/resources/ResourcesScreen/styles.js
+// screens/resources/ResourcesScreen/styles.js
 import { StyleSheet, Dimensions } from 'react-native';
 import { theme } from '../../../styles/theme';
 

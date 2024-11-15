@@ -1,4 +1,4 @@
-// src/components/common/Button/styles.js
+// components/common/Button/styles.js
 import { StyleSheet } from 'react-native';
 import { theme } from '../../../styles/theme';
 

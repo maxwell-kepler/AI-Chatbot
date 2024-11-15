@@ -1,4 +1,4 @@
-// src/screens/chat/ChatScreen/styles.js
+// screens/chat/ChatScreen/styles.js
 import { StyleSheet, Platform } from 'react-native';
 import { theme } from '../../../styles/theme';
 

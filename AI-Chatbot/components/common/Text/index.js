@@ -1,4 +1,4 @@
-// src/components/common/Text/index.js
+// components/common/Text/index.js
 import React from 'react';
 import { Text as RNText } from 'react-native';
 import { theme } from '../../../styles/theme';

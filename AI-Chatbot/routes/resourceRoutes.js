@@ -1,3 +1,4 @@
+// routes/resourceRoutes.js
 import { Router } from 'express';
 const router = Router();
 const db = require('../config/database');

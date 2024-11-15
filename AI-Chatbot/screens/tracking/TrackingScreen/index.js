@@ -1,4 +1,4 @@
-// src/screens/tracking/TrackingScreen/index.js
+// screens/tracking/TrackingScreen/index.js
 import React from 'react';
 import { View, ScrollView, Text, Dimensions } from 'react-native';
 import { LineChart, PieChart } from 'react-native-chart-kit';

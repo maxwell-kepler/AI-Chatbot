@@ -1,4 +1,4 @@
-// src/components/specific/Settings/ResetPasswordModal/styles.js
+// components/specific/Settings/ResetPasswordModal/styles.js
 import { StyleSheet } from 'react-native';
 import { theme } from '../../../../styles/theme';
 

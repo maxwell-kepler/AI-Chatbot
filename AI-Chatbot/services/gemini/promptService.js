@@ -1,4 +1,4 @@
-// src/services/promptService.js
+// services/promptService.js
 import {
     MOOD_PATTERNS,
     CRISIS_RESOURCES,

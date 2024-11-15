@@ -1,4 +1,4 @@
-// src/data/mockResources.js
+// data/mockResources.js
 
 export const CATEGORIES = [
     { id: 1, name: 'Crisis Support', icon: 'alert-circle' },

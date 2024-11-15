@@ -1,4 +1,4 @@
-// src/screens/resources/ResourcesScreen/index.js
+// screens/resources/ResourcesScreen/index.js
 import React, { useState, useCallback, useEffect } from 'react';
 import {
     View,

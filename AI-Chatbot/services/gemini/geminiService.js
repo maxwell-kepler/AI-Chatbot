@@ -1,4 +1,4 @@
-// src/services/geminiService.js
+// services/geminiService.js
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import configAPI from '../../config/config';
 import promptService from './promptService';

@@ -1,4 +1,4 @@
-// src/utils/dateUtils.js
+// utils/dateUtils.js
 export const formatMessageTime = (timestamp) => {
     if (!timestamp) return '';
 

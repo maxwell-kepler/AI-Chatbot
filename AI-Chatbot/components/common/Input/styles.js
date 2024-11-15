@@ -1,4 +1,4 @@
-// src/components/common/Input/styles.js
+// components/common/Input/styles.js
 import { StyleSheet } from 'react-native';
 import { theme } from '../../../styles/theme';
 

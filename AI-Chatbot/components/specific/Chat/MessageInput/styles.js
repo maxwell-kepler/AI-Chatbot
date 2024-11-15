@@ -1,4 +1,4 @@
-// src/components/specific/Chat/MessageInput/styles.js
+// components/specific/Chat/MessageInput/styles.js
 import { StyleSheet, Platform } from 'react-native';
 import { theme } from '../../../../styles/theme';
 

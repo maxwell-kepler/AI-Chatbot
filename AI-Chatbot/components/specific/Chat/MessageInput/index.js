@@ -1,4 +1,4 @@
-// src/components/specific/Chat/MessageInput/index.js
+// components/specific/Chat/MessageInput/index.js
 import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity } from 'react-native';
 import { Send } from 'lucide-react-native';

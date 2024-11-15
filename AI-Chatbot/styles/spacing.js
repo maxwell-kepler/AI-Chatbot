@@ -1,4 +1,4 @@
-// src/styles/spacing.js
+// styles/spacing.js
 export const spacing = {
     // Base spacing unit (4px)
     base: 4,

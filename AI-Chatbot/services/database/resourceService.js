@@ -1,4 +1,4 @@
-//src/services/database/resourceService.js
+// services/database/resourceService.js
 import { API_URL } from "../../config/api";
 
 export const resourceService = {
