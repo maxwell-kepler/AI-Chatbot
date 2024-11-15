@@ -1,4 +1,4 @@
-// src/styles/utilities.js
+// styles/utilities.js
 import { Platform, PixelRatio, Dimensions } from 'react-native';
 import { theme } from './theme';
 
