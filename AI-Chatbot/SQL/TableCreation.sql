@@ -85,9 +85,11 @@ CREATE TABLE Conversations (
     end_time TIMESTAMP,
     risk_level ENUM('low', 'medium', 'high') DEFAULT 'low',
     summary TEXT,
-    status ENUM('active', 'completed', 'interrupted') DEFAULT 'active',
+    status ENUM('active', 'liminal', 'completed') DEFAULT 'active',
     user_ID VARCHAR(128),
-    FOREIGN KEY (user_ID) REFERENCES Users(user_ID)
+    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_ID) REFERENCES Users(user_ID),
+    INDEX idx_status_last_activity (status, last_activity)
 );
 
 -- Messages table

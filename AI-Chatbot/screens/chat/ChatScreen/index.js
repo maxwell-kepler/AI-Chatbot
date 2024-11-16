@@ -8,8 +8,10 @@ import {
     Keyboard,
     TouchableWithoutFeedback,
     Alert,
+    AppState
 } from 'react-native';
 import { useAuth } from '../../../hooks/useAuth';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { theme } from '../../../styles/theme';
 import ChatBubble from '../../../components/specific/Chat/ChatBubble';
 import MessageInput from '../../../components/specific/Chat/MessageInput';
@@ -34,6 +36,110 @@ const ChatScreen = () => {
     const [initializationAttempts, setInitializationAttempts] = useState(0);
     const scrollViewRef = useRef(null);
     const initializationTimeout = useRef(null);
+    const isFocused = useIsFocused();
+    const appStateRef = useRef(AppState.currentState);
+
+    // Handle app state changes (background/foreground)
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', nextAppState => {
+            if (
+                appStateRef.current.match(/active|foreground/) &&
+                nextAppState === 'background'
+            ) {
+                handleAppBackground();
+            } else if (
+                appStateRef.current === 'background' &&
+                nextAppState === 'active'
+            ) {
+                handleAppForeground();
+            }
+            appStateRef.current = nextAppState;
+        });
+
+        return () => {
+            subscription.remove();
+        };
+    }, [conversationId]);
+
+    // Handle screen focus changes
+    useFocusEffect(
+        React.useCallback(() => {
+            if (conversationId) {
+                handleScreenFocus();
+            }
+
+            return () => {
+                if (conversationId) {
+                    handleScreenBlur();
+                }
+            };
+        }, [conversationId])
+    );
+
+    const handleScreenFocus = async () => {
+        if (!conversationId) return;
+
+        try {
+            // Transition from liminal to active
+            await conversationService.updateConversationStatus(
+                conversationId,
+                'active'
+            );
+        } catch (error) {
+            console.error('Error transitioning to active state:', error);
+        }
+    };
+
+    const handleScreenBlur = async () => {
+        if (!conversationId) return;
+
+        try {
+            // Generate summary and transition to liminal
+            const summaryResult = await conversationService.generateConversationSummary(
+                conversationId
+            );
+
+            if (summaryResult.success) {
+                await conversationService.updateConversationStatus(
+                    conversationId,
+                    'liminal',
+                    summaryResult.summary
+                );
+            }
+        } catch (error) {
+            console.error('Error transitioning to liminal state:', error);
+        }
+    };
+
+    const handleAppBackground = async () => {
+        if (!conversationId) return;
+
+        try {
+            const summaryResult = await conversationService.generateConversationSummary(
+                conversationId
+            );
+
+            if (summaryResult.success) {
+                await conversationService.updateConversationStatus(
+                    conversationId,
+                    'completed',
+                    summaryResult.summary
+                );
+            }
+        } catch (error) {
+            console.error('Error completing conversation:', error);
+        }
+    };
+
+    const handleAppForeground = async () => {
+        // When app comes to foreground, initialize a new conversation if needed
+        if (!isFocused) return; // Only initialize if we're on the chat screen
+
+        setConversationId(null);
+        setInitialized(false);
+        setInitializationAttempts(0);
+        setMessages([INITIAL_MESSAGE]);
+    };
 
     useEffect(() => {
         // Clear any existing timeout on cleanup
@@ -173,6 +279,12 @@ const ChatScreen = () => {
                 conversationId,
                 message,
                 'user'
+            );
+
+            // Update status to active if it wasn't already
+            await conversationService.updateConversationStatus(
+                conversationId,
+                'active'
             );
 
             // Get AI response
