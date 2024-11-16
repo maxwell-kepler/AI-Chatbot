@@ -5,8 +5,25 @@ const errorHandler = (err, req, res, next) => {
         stack: err.stack,
         path: req.path,
         method: req.method,
-        body: req.body
+        body: req.body,
+        query: req.query,
+        params: req.params
     });
+
+    // Handle specific types of errors
+    if (err.code === 'ER_NO_SUCH_TABLE') {
+        return res.status(500).json({
+            success: false,
+            error: 'Database table not found'
+        });
+    }
+
+    if (err.code === 'ER_BAD_FIELD_ERROR') {
+        return res.status(500).json({
+            success: false,
+            error: 'Invalid database field requested'
+        });
+    }
 
     const statusCode = err.statusCode || 500;
     const message = err.message || 'Internal server error';
