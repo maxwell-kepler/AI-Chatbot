@@ -1,5 +1,5 @@
 // controllers/userController.js
-import { formatDateForMySQL } from '../utils/dateUtils';
+const { formatDateForMySQL } = require('../utils/dateFormatter');
 const db = require('../config/database');
 
 class UserController {

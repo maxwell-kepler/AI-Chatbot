@@ -1,6 +1,6 @@
 // controllers/conversationController.js
-import { formatDateForMySQL } from '../utils/dateUtils';
 const db = require('../config/database');
+const { formatDateForMySQL } = require('../utils/dateFormatter');
 
 class ConversationController {
     createConversation = async (req, res, next) => {
