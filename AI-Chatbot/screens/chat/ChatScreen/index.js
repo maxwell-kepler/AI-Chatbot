@@ -1,4 +1,3 @@
-// screens/chat/ChatScreen/index.js
 import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
@@ -8,11 +7,15 @@ import {
     Platform,
     Keyboard,
     TouchableWithoutFeedback,
+    Alert,
 } from 'react-native';
+import { useAuth } from '../../../hooks/useAuth';
 import { theme } from '../../../styles/theme';
 import ChatBubble from '../../../components/specific/Chat/ChatBubble';
 import MessageInput from '../../../components/specific/Chat/MessageInput';
 import { chatWithGemini } from '../../../services/gemini/geminiService';
+import { conversationService } from '../../../services/database/conversationService';
+import LoadingScreen from '../../common/LoadingScreen';
 import styles from './styles';
 import { WELCOME_MESSAGE } from '../../../config/promptConfig';
 
@@ -23,39 +26,137 @@ const INITIAL_MESSAGE = {
 };
 
 const ChatScreen = () => {
+    const { user, loading: authLoading } = useAuth();
     const [messages, setMessages] = useState([INITIAL_MESSAGE]);
     const [loading, setLoading] = useState(false);
+    const [conversationId, setConversationId] = useState(null);
+    const [initialized, setInitialized] = useState(false);
+    const [initializationAttempts, setInitializationAttempts] = useState(0);
     const scrollViewRef = useRef(null);
-    const keyboardDidShowListener = useRef(null);
-    const keyboardDidHideListener = useRef(null);
+    const initializationTimeout = useRef(null);
 
     useEffect(() => {
-        // Set up keyboard listeners
-        keyboardDidShowListener.current = Keyboard.addListener(
-            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-            () => scrollToBottom(true)
-        );
-        keyboardDidHideListener.current = Keyboard.addListener(
-            Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-            () => scrollToBottom(true)
-        );
-
-        // Cleanup listeners
+        // Clear any existing timeout on cleanup
         return () => {
-            keyboardDidShowListener.current?.remove();
-            keyboardDidHideListener.current?.remove();
+            if (initializationTimeout.current) {
+                clearTimeout(initializationTimeout.current);
+            }
         };
     }, []);
+
+    useEffect(() => {
+        const initializeConversation = async () => {
+            try {
+                if (!user?.uid) {
+                    console.log('No user ID available');
+                    return;
+                }
+
+                // Try to initialize the conversation
+                const result = await conversationService.createConversation(user.uid);
+
+                if (result.success) {
+                    setConversationId(result.conversationId);
+                    setInitialized(true);
+                    // Save initial welcome message
+                    await conversationService.addMessage(
+                        result.conversationId,
+                        INITIAL_MESSAGE.text,
+                        'ai'
+                    );
+                } else {
+                    // If failed and we haven't tried too many times, schedule another attempt
+                    if (initializationAttempts < 5) {
+                        console.log(`Retrying initialization attempt ${initializationAttempts + 1}`);
+                        initializationTimeout.current = setTimeout(() => {
+                            setInitializationAttempts(prev => prev + 1);
+                        }, 1000); // Wait 1 second before retrying
+                    } else {
+                        console.error('Failed to initialize conversation after multiple attempts');
+                        Alert.alert(
+                            'Error',
+                            'Failed to start conversation. Please try restarting the app.'
+                        );
+                    }
+                }
+            } catch (error) {
+                console.error('Error initializing conversation:', error);
+
+                if (error.message.includes('User not found') && initializationAttempts < 5) {
+                    console.log(`Retrying after User not found error - attempt ${initializationAttempts + 1}`);
+                    initializationTimeout.current = setTimeout(() => {
+                        setInitializationAttempts(prev => prev + 1);
+                    }, 1000);
+                } else {
+                    Alert.alert(
+                        'Error',
+                        'Failed to start conversation. Please try again later.'
+                    );
+                }
+            }
+        };
+        if (user && !initialized && initializationAttempts < 5) {
+            initializeConversation();
+        }
+
+    }, [user, initialized, initializationAttempts]);
+
+    const initializeConversation = async () => {
+        try {
+            if (!user?.uid) {
+                console.error('No user ID available');
+                return;
+            }
+
+            const result = await conversationService.createConversation(user.uid);
+            if (result.success) {
+                setConversationId(result.conversationId);
+                // Save initial welcome message
+                await conversationService.addMessage(
+                    result.conversationId,
+                    INITIAL_MESSAGE.text,
+                    'ai'
+                );
+            } else {
+                console.error('Failed to initialize conversation:', result.error);
+                Alert.alert(
+                    'Error',
+                    'Failed to start conversation. Please try again later.'
+                );
+            }
+        } catch (error) {
+            console.error('Error initializing conversation:', error);
+        }
+    };
+
+    const handleConversationEnd = async () => {
+        if (conversationId) {
+            try {
+                await conversationService.updateConversationStatus(
+                    conversationId,
+                    'completed',
+                    'User left the chat'
+                );
+            } catch (error) {
+                console.error('Error ending conversation:', error);
+            }
+        }
+    };
 
     const scrollToBottom = (animated = true) => {
         if (scrollViewRef.current) {
             setTimeout(() => {
                 scrollViewRef.current.scrollToEnd({ animated });
-            }, 100); // Small delay to ensure content is laid out
+            }, 100);
         }
     };
 
     const handleSend = async (message) => {
+        if (!conversationId) {
+            Alert.alert('Error', 'Conversation not initialized');
+            return;
+        }
+
         const newMessage = {
             text: message,
             isUser: true,
@@ -67,16 +168,43 @@ const ChatScreen = () => {
         scrollToBottom();
 
         try {
+            // Save user message
+            await conversationService.addMessage(
+                conversationId,
+                message,
+                'user'
+            );
+
+            // Get AI response
             const response = await chatWithGemini(message);
+            const { text, isCrisis, emotionalState } = response;
+
+            // Save AI response
+            await conversationService.addMessage(
+                conversationId,
+                text,
+                'ai',
+                emotionalState
+            );
 
             const aiResponse = {
-                text: response.text,
+                text,
                 isUser: false,
                 timestamp: new Date(),
             };
 
             setMessages(prev => [...prev, aiResponse]);
-            scrollToBottom();
+
+            // Handle crisis situation if detected
+            if (isCrisis) {
+                await handleCrisisSituation(message);
+            }
+
+            // Update risk level based on emotional state
+            if (emotionalState) {
+                await updateRiskLevel(emotionalState);
+            }
+
         } catch (error) {
             console.error('Chat error:', error);
             const errorMessage = {
@@ -86,11 +214,62 @@ const ChatScreen = () => {
                 isError: true,
             };
             setMessages(prev => [...prev, errorMessage]);
+            await conversationService.addMessage(
+                conversationId,
+                errorMessage.text,
+                'ai',
+                { error: true }
+            );
         } finally {
             setLoading(false);
             scrollToBottom();
         }
     };
+
+    const handleCrisisSituation = async (message) => {
+        try {
+            await conversationService.recordCrisisEvent(
+                conversationId,
+                user.uid,
+                'severe',
+                'AI detected crisis keywords in user message: ' + message
+            );
+            await conversationService.updateRiskLevel(conversationId, 'high');
+        } catch (error) {
+            console.error('Error handling crisis situation:', error);
+        }
+    };
+
+    const updateRiskLevel = async (emotionalState) => {
+        try {
+            // Determine risk level based on emotional state
+            let riskLevel = 'low';
+            if (emotionalState.state.includes('crisis')) {
+                riskLevel = 'high';
+            } else if (emotionalState.state.includes('anxiety') ||
+                emotionalState.state.includes('depression')) {
+                riskLevel = 'medium';
+            }
+
+            await conversationService.updateRiskLevel(conversationId, riskLevel);
+        } catch (error) {
+            console.error('Error updating risk level:', error);
+        }
+    };
+
+    if (authLoading) {
+        return <LoadingScreen />;
+    }
+
+    if (!user) {
+        return (
+            <View style={styles.container}>
+                <Text style={styles.errorText}>
+                    Please log in to access the chat.
+                </Text>
+            </View>
+        );
+    }
 
     return (
         <KeyboardAvoidingView
@@ -127,7 +306,7 @@ const ChatScreen = () => {
                     <View style={styles.inputWrapper}>
                         <MessageInput
                             onSend={handleSend}
-                            disabled={loading}
+                            disabled={loading || !conversationId}
                         />
                     </View>
                 </View>

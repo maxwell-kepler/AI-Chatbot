@@ -98,7 +98,8 @@ CREATE TABLE Messages (
     sender_type ENUM('user', 'ai') NOT NULL,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     emotional_state JSON,
-    FOREIGN KEY (conversation_ID) REFERENCES Conversations(conversation_ID)
+    FOREIGN KEY (conversation_ID) REFERENCES Conversations(conversation_ID),
+    INDEX idx_conversation_timestamp (conversation_ID, timestamp)
 );
 
 -- Crisis Events table

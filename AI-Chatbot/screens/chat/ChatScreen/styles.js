@@ -27,4 +27,10 @@ export default StyleSheet.create({
         borderTopColor: theme.colors.neutral.grey200,
         backgroundColor: theme.colors.neutral.white,
     },
+    errorText: {
+        ...theme.typography.presets.body1,
+        color: theme.colors.error.main,
+        textAlign: 'center',
+        padding: theme.spacing.lg,
+    },
 });

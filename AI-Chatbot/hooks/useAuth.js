@@ -1,5 +1,4 @@
 // hooks/useAuth.js
-
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../config/firebase';
@@ -10,6 +9,7 @@ export const useAuth = () => {
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
+            console.log('Auth state changed:', user?.uid);
             setUser(user);
             setLoading(false);
         });

@@ -8,16 +8,96 @@ import {
     updatePassword
 } from 'firebase/auth';
 import { auth } from '../../config/firebase';
+import { userService } from '../database/userService';
+import { API_URL } from "../../config/api";
 
 class AuthService {
+    async createAccount(email, password) {
+        try {
+            // Create Firebase user
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const firebaseUser = userCredential.user;
+
+            // Create user in our database
+            const response = await fetch(`${API_URL}/users`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    firebaseId: firebaseUser.uid,
+                    email: firebaseUser.email,
+                    name: email.split('@')[0],
+                    createAt: new Date().toISOString(),
+                    lastLogin: new Date().toISOString()
+                })
+            });
+
+            if (!response.ok) {
+                // If database creation fails, delete the Firebase user
+                await firebaseUser.delete();
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to create user in database');
+            }
+
+            const userData = await response.json();
+
+            return {
+                success: true,
+                user: firebaseUser,
+                userData: userData.data
+            };
+
+        } catch (error) {
+            console.error('Auth error:', error);
+            let errorMessage = 'Failed to create account';
+
+            switch (error.code) {
+                case 'auth/email-already-in-use':
+                    errorMessage = 'An account already exists with this email';
+                    break;
+                case 'auth/invalid-email':
+                    errorMessage = 'Invalid email address format';
+                    break;
+                case 'auth/weak-password':
+                    errorMessage = 'Password should be at least 6 characters';
+                    break;
+                default:
+                    errorMessage = error.message;
+            }
+
+            return {
+                success: false,
+                error: errorMessage
+            };
+        }
+    }
+
     async signIn(email, password) {
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const firebaseUser = userCredential.user;
+
+            // Update last login in our database
+            const response = await fetch(`${API_URL}/users/firebase/${firebaseUser.uid}/login`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('Database sync error:', errorData);
+            }
+
             return {
                 success: true,
-                user: userCredential.user
+                user: firebaseUser
             };
+
         } catch (error) {
+            console.error('Sign in error:', error);
             let errorMessage = 'Failed to sign in';
 
             switch (error.code) {
@@ -32,43 +112,6 @@ class AuthService {
                     break;
                 case 'auth/wrong-password':
                     errorMessage = 'Invalid password';
-                    break;
-                case 'auth/too-many-requests':
-                    errorMessage = 'Too many failed attempts. Please try again later';
-                    break;
-                default:
-                    errorMessage = error.message;
-            }
-
-            return {
-                success: false,
-                error: errorMessage
-            };
-        }
-    }
-
-    async createAccount(email, password) {
-        try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            return {
-                success: true,
-                user: userCredential.user
-            };
-        } catch (error) {
-            let errorMessage = 'Failed to create account';
-
-            switch (error.code) {
-                case 'auth/email-already-in-use':
-                    errorMessage = 'An account already exists with this email';
-                    break;
-                case 'auth/invalid-email':
-                    errorMessage = 'Invalid email address format';
-                    break;
-                case 'auth/operation-not-allowed':
-                    errorMessage = 'Email/password accounts are not enabled';
-                    break;
-                case 'auth/weak-password':
-                    errorMessage = 'Password should be at least 6 characters';
                     break;
                 default:
                     errorMessage = error.message;
@@ -112,8 +155,17 @@ class AuthService {
         }
     }
 
-    signOut() {
-        return auth.signOut();
+    async signOut() {
+        try {
+            const currentUser = auth.currentUser;
+            if (currentUser) {
+                await userService.updateLastLogin(currentUser.uid);
+            }
+            return auth.signOut();
+        } catch (error) {
+            console.error('Error during sign out:', error);
+            throw error;
+        }
     }
 
     async resetPassword(currentPassword, newPassword) {
@@ -127,7 +179,6 @@ class AuthService {
                 };
             }
 
-            // First, reauthenticate the user
             const credential = EmailAuthProvider.credential(
                 user.email,
                 currentPassword
@@ -157,7 +208,6 @@ class AuthService {
                 }
             }
 
-            // Then update the password
             try {
                 await updatePassword(user, newPassword);
                 return {
