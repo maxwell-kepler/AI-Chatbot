@@ -1,6 +1,7 @@
 // controllers/conversationController.js
 const db = require('../config/database');
 const { formatDateForMySQL } = require('../utils/dateFormatter');
+const summaryService = require('../services/summary/summaryService');
 
 class ConversationController {
     createConversation = async (req, res, next) => {
@@ -298,7 +299,8 @@ class ConversationController {
                 `SELECT 
                     content,
                     sender_type,
-                    emotional_state
+                    emotional_state,
+                    timestamp
                 FROM Messages 
                 WHERE conversation_ID = ?
                 ORDER BY timestamp ASC`,
@@ -314,55 +316,23 @@ class ConversationController {
                 });
             }
 
-            // Create a summary based on the messages
-            let summary = 'Conversation Summary:\n';
+            // Generate AI summary
+            const summaryResult = await summaryService.generateSummary(messages);
 
-            let emotionalStates = new Set();
-            let userMessages = [];
-            let aiResponses = [];
-
-            messages.forEach(message => {
-                if (message.emotional_state) {
-                    try {
-                        const state = JSON.parse(message.emotional_state);
-                        if (state.state) {
-                            state.state.forEach(s => emotionalStates.add(s));
-                        }
-                    } catch (e) {
-                        console.error('Error parsing emotional state:', e);
-                    }
-                }
-
-                if (message.sender_type === 'user') {
-                    userMessages.push(message.content);
-                } else {
-                    aiResponses.push(message.content);
-                }
-            });
-
-            // Add emotional states if any were detected
-            if (emotionalStates.size > 0) {
-                summary += `\nEmotional States Detected: ${Array.from(emotionalStates).join(', ')}\n`;
+            if (!summaryResult.success) {
+                throw new Error('Failed to generate AI summary');
             }
 
-            // Add key points from user messages
-            summary += '\nKey Points Discussed:\n';
-            userMessages.slice(-3).forEach(message => {
-                summary += `- ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}\n`;
-            });
-
-            // Add main themes from AI responses
-            if (aiResponses.length > 0) {
-                summary += '\nMain Themes from Responses:\n';
-                aiResponses.slice(-2).forEach(response => {
-                    summary += `- ${response.substring(0, 100)}${response.length > 100 ? '...' : ''}\n`;
-                });
-            }
+            // Save the summary to the conversation
+            await db.execute(
+                'UPDATE Conversations SET summary = ? WHERE conversation_ID = ?',
+                [summaryResult.summary, conversationId]
+            );
 
             res.json({
                 success: true,
                 data: {
-                    summary
+                    summary: summaryResult.summary
                 }
             });
 
