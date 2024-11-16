@@ -21,23 +21,44 @@ import LoadingScreen from '../../common/LoadingScreen';
 import styles from './styles';
 import { WELCOME_MESSAGE } from '../../../config/promptConfig';
 
-const INITIAL_MESSAGE = {
-    text: WELCOME_MESSAGE,
-    isUser: false,
-    timestamp: new Date(),
-};
+
 
 const ChatScreen = () => {
     const { user, loading: authLoading } = useAuth();
-    const [messages, setMessages] = useState([INITIAL_MESSAGE]);
+    const [messages, setMessages] = useState([{
+        text: WELCOME_MESSAGE,
+        isUser: false,
+        timestamp: new Date(),
+    }]);
     const [loading, setLoading] = useState(false);
     const [conversationId, setConversationId] = useState(null);
-    const [initialized, setInitialized] = useState(false);
-    const [initializationAttempts, setInitializationAttempts] = useState(0);
+    const [currentStatus, setCurrentStatus] = useState(null);
     const scrollViewRef = useRef(null);
-    const initializationTimeout = useRef(null);
     const isFocused = useIsFocused();
     const appStateRef = useRef(AppState.currentState);
+
+    // Initialize conversation only when user sends first message
+    const initializeConversation = async () => {
+        try {
+            console.log('Initializing new conversation');
+            const result = await conversationService.createConversation(user.uid);
+
+            if (result.success) {
+                setConversationId(result.conversationId);
+                setCurrentStatus(result.status);
+                return result.conversationId;
+            } else {
+                throw new Error(result.error);
+            }
+        } catch (error) {
+            console.error('Error initializing conversation:', error);
+            Alert.alert(
+                'Error',
+                'Failed to start conversation. Please try again.'
+            );
+            return null;
+        }
+    };
 
     // Handle app state changes (background/foreground)
     useEffect(() => {
@@ -47,11 +68,6 @@ const ChatScreen = () => {
                 nextAppState === 'background'
             ) {
                 handleAppBackground();
-            } else if (
-                appStateRef.current === 'background' &&
-                nextAppState === 'active'
-            ) {
-                handleAppForeground();
             }
             appStateRef.current = nextAppState;
         });
@@ -64,6 +80,7 @@ const ChatScreen = () => {
     // Handle screen focus changes
     useFocusEffect(
         React.useCallback(() => {
+            // No need to do anything on focus if there's no conversation yet
             if (conversationId) {
                 handleScreenFocus();
             }
@@ -131,123 +148,6 @@ const ChatScreen = () => {
         }
     };
 
-    const handleAppForeground = async () => {
-        // When app comes to foreground, initialize a new conversation if needed
-        if (!isFocused) return; // Only initialize if we're on the chat screen
-
-        setConversationId(null);
-        setInitialized(false);
-        setInitializationAttempts(0);
-        setMessages([INITIAL_MESSAGE]);
-    };
-
-    useEffect(() => {
-        // Clear any existing timeout on cleanup
-        return () => {
-            if (initializationTimeout.current) {
-                clearTimeout(initializationTimeout.current);
-            }
-        };
-    }, []);
-
-    useEffect(() => {
-        const initializeConversation = async () => {
-            try {
-                if (!user?.uid) {
-                    console.log('No user ID available');
-                    return;
-                }
-
-                // Try to initialize the conversation
-                const result = await conversationService.createConversation(user.uid);
-
-                if (result.success) {
-                    setConversationId(result.conversationId);
-                    setInitialized(true);
-                    // Save initial welcome message
-                    await conversationService.addMessage(
-                        result.conversationId,
-                        INITIAL_MESSAGE.text,
-                        'ai'
-                    );
-                } else {
-                    // If failed and we haven't tried too many times, schedule another attempt
-                    if (initializationAttempts < 5) {
-                        console.log(`Retrying initialization attempt ${initializationAttempts + 1}`);
-                        initializationTimeout.current = setTimeout(() => {
-                            setInitializationAttempts(prev => prev + 1);
-                        }, 1000); // Wait 1 second before retrying
-                    } else {
-                        console.error('Failed to initialize conversation after multiple attempts');
-                        Alert.alert(
-                            'Error',
-                            'Failed to start conversation. Please try restarting the app.'
-                        );
-                    }
-                }
-            } catch (error) {
-                console.error('Error initializing conversation:', error);
-
-                if (error.message.includes('User not found') && initializationAttempts < 5) {
-                    console.log(`Retrying after User not found error - attempt ${initializationAttempts + 1}`);
-                    initializationTimeout.current = setTimeout(() => {
-                        setInitializationAttempts(prev => prev + 1);
-                    }, 1000);
-                } else {
-                    Alert.alert(
-                        'Error',
-                        'Failed to start conversation. Please try again later.'
-                    );
-                }
-            }
-        };
-        if (user && !initialized && initializationAttempts < 5) {
-            initializeConversation();
-        }
-
-    }, [user, initialized, initializationAttempts]);
-
-    const initializeConversation = async () => {
-        try {
-            if (!user?.uid) {
-                console.error('No user ID available');
-                return;
-            }
-
-            const result = await conversationService.createConversation(user.uid);
-            if (result.success) {
-                setConversationId(result.conversationId);
-                // Save initial welcome message
-                await conversationService.addMessage(
-                    result.conversationId,
-                    INITIAL_MESSAGE.text,
-                    'ai'
-                );
-            } else {
-                console.error('Failed to initialize conversation:', result.error);
-                Alert.alert(
-                    'Error',
-                    'Failed to start conversation. Please try again later.'
-                );
-            }
-        } catch (error) {
-            console.error('Error initializing conversation:', error);
-        }
-    };
-
-    const handleConversationEnd = async () => {
-        if (conversationId) {
-            try {
-                await conversationService.updateConversationStatus(
-                    conversationId,
-                    'completed',
-                    'User left the chat'
-                );
-            } catch (error) {
-                console.error('Error ending conversation:', error);
-            }
-        }
-    };
 
     const scrollToBottom = (animated = true) => {
         if (scrollViewRef.current) {
@@ -258,85 +158,100 @@ const ChatScreen = () => {
     };
 
     const handleSend = async (message) => {
-        if (!conversationId) {
-            Alert.alert('Error', 'Conversation not initialized');
-            return;
-        }
-
-        const newMessage = {
-            text: message,
-            isUser: true,
-            timestamp: new Date(),
-        };
-
-        setMessages(prev => [...prev, newMessage]);
-        setLoading(true);
-        scrollToBottom();
-
         try {
-            // Save user message
-            await conversationService.addMessage(
-                conversationId,
-                message,
-                'user'
-            );
+            let currentConversationId = conversationId;
 
-            // Update status to active if it wasn't already
-            await conversationService.updateConversationStatus(
-                conversationId,
-                'active'
-            );
+            // Initialize conversation if this is the first user message
+            if (!currentConversationId) {
+                currentConversationId = await initializeConversation();
+                if (!currentConversationId) return;
 
-            // Get AI response
-            const response = await chatWithGemini(message);
-            const { text, isCrisis, emotionalState } = response;
+                // Now that we have a conversation, save the welcome message and the user's message
+                await conversationService.addMessage(
+                    currentConversationId,
+                    WELCOME_MESSAGE,
+                    'ai'
+                );
+            }
 
-            // Save AI response
-            await conversationService.addMessage(
-                conversationId,
-                text,
-                'ai',
-                emotionalState
-            );
-
-            const aiResponse = {
-                text,
-                isUser: false,
+            const newMessage = {
+                text: message,
+                isUser: true,
                 timestamp: new Date(),
             };
 
-            setMessages(prev => [...prev, aiResponse]);
+            setMessages(prev => [...prev, newMessage]);
+            setLoading(true);
+            scrollToBottom();
 
-            // Handle crisis situation if detected
-            if (isCrisis) {
-                await handleCrisisSituation(message);
-            }
+            try {
+                // Save user message
+                await conversationService.addMessage(
+                    currentConversationId,
+                    message,
+                    'user'
+                );
 
-            // Update risk level based on emotional state
-            if (emotionalState) {
-                await updateRiskLevel(emotionalState);
+                // Only update status if we're not already active
+                if (currentStatus !== 'active') {
+                    await conversationService.updateConversationStatus(
+                        currentConversationId,
+                        'active'
+                    );
+                    setCurrentStatus('active');
+                }
+
+                // Get AI response
+                const response = await chatWithGemini(message);
+                const { text, isCrisis, emotionalState } = response;
+
+                // Save AI response
+                await conversationService.addMessage(
+                    currentConversationId,
+                    text,
+                    'ai',
+                    emotionalState
+                );
+
+                const aiResponse = {
+                    text,
+                    isUser: false,
+                    timestamp: new Date(),
+                };
+
+                setMessages(prev => [...prev, aiResponse]);
+
+                // Handle crisis situation if detected
+                if (isCrisis) {
+                    await handleCrisisSituation(message);
+                }
+
+                // Update risk level based on emotional state
+                if (emotionalState) {
+                    await updateRiskLevel(emotionalState);
+                }
+
+            } catch (error) {
+                console.error('Chat error:', error);
+                const errorMessage = {
+                    text: "I'm sorry, I couldn't process your message. Please try again.",
+                    isUser: false,
+                    timestamp: new Date(),
+                    isError: true,
+                };
+                setMessages(prev => [...prev, errorMessage]);
             }
 
         } catch (error) {
-            console.error('Chat error:', error);
-            const errorMessage = {
-                text: "I'm sorry, I couldn't process your message. Please try again.",
-                isUser: false,
-                timestamp: new Date(),
-                isError: true,
-            };
-            setMessages(prev => [...prev, errorMessage]);
-            await conversationService.addMessage(
-                conversationId,
-                errorMessage.text,
-                'ai',
-                { error: true }
-            );
+            console.error('Error in handleSend:', error);
+            Alert.alert('Error', 'Failed to send message. Please try again.');
         } finally {
             setLoading(false);
             scrollToBottom();
         }
     };
+
+
 
     const handleCrisisSituation = async (message) => {
         try {
@@ -418,7 +333,7 @@ const ChatScreen = () => {
                     <View style={styles.inputWrapper}>
                         <MessageInput
                             onSend={handleSend}
-                            disabled={loading || !conversationId}
+                            disabled={loading}
                         />
                     </View>
                 </View>

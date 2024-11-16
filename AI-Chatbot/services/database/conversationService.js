@@ -37,7 +37,8 @@ export const conversationService = {
                 console.log('Conversation created successfully:', data);
                 return {
                     success: true,
-                    conversationId: data.conversationId
+                    conversationId: data.conversationId,
+                    status: 'active'  // Include initial status in response
                 };
 
             } catch (error) {
