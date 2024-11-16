@@ -174,7 +174,7 @@ app.post('/api/users', async (req, res) => {
         if (existingFirebaseLogins.length === 0) {
             await connection.execute(
                 'INSERT INTO Firebase_Login (ID, email, password) VALUES (?, ?, ?)',
-                [firebaseId, email, 'firebase-managed'] // Password is managed by Firebase
+                [firebaseId, email, 'firebase-managed']
             );
         }
 
@@ -184,31 +184,37 @@ app.post('/api/users', async (req, res) => {
             [firebaseId]
         );
 
+        let userId;
         if (existingUsers.length > 0) {
-            await connection.rollback();
-            return res.status(409).json({
-                message: 'User already exists'
-            });
+            userId = existingUsers[0].user_ID;
+            // Update last login
+            await connection.execute(
+                'UPDATE Users SET last_login = ? WHERE user_ID = ?',
+                [formatDateForMySQL(lastLogin || new Date()), userId]
+            );
+        } else {
+            // Format dates for MySQL
+            const formattedCreateAt = formatDateForMySQL(createAt || new Date());
+            const formattedLastLogin = formatDateForMySQL(lastLogin || new Date());
+
+            // Generate UUID for user
+            const [uuidResult] = await connection.execute('SELECT UUID() as uuid');
+            userId = uuidResult[0].uuid;
+
+            // Create user with the generated UUID
+            await connection.execute(
+                'INSERT INTO Users (user_ID, name, create_at, last_login, firebase_ID) VALUES (?, ?, ?, ?, ?)',
+                [userId, name, formattedCreateAt, formattedLastLogin, firebaseId]
+            );
         }
 
-        // Format dates for MySQL
-        const formattedCreateAt = formatDateForMySQL(createAt || new Date());
-        const formattedLastLogin = formatDateForMySQL(lastLogin || new Date());
-
-        // Create user
-        await connection.execute(
-            'INSERT INTO Users (user_ID, name, create_at, last_login, firebase_ID) VALUES (UUID(), ?, ?, ?, ?)',
-            [name, formattedCreateAt, formattedLastLogin, firebaseId]
-        );
-
-        // Fetch created user
-        const [users] = await connection.execute(
-            'SELECT * FROM Users WHERE firebase_ID = ?',
-            [firebaseId]
-        );
-
         await connection.commit();
-        res.status(201).json(users[0]);
+        res.status(201).json({
+            user_ID: userId,
+            firebase_ID: firebaseId,
+            name,
+            email
+        });
 
     } catch (error) {
         await connection.rollback();
@@ -221,6 +227,7 @@ app.post('/api/users', async (req, res) => {
         connection.release();
     }
 });
+
 
 // Get user by Firebase ID
 app.get('/api/users/firebase/:firebaseId', async (req, res) => {
@@ -274,7 +281,11 @@ app.put('/api/users/firebase/:firebaseId/login', async (req, res) => {
 
 // Create new conversation
 app.post('/api/conversations', async (req, res) => {
+    const connection = await db.getConnection();
+
     try {
+        await connection.beginTransaction();
+
         const { userId: firebaseId, status, startTime } = req.body;
 
         // Input validation
@@ -284,39 +295,55 @@ app.post('/api/conversations', async (req, res) => {
             });
         }
 
-        // First, get the MySQL user_ID using the firebase_ID
-        const [users] = await db.execute(
-            'SELECT user_ID FROM Users WHERE firebase_ID = ?',
-            [firebaseId]
-        );
+        // Get or wait for the MySQL user_ID using the firebase_ID
+        let retries = 3;
+        let users;
+
+        while (retries > 0) {
+            [users] = await connection.execute(
+                'SELECT user_ID FROM Users WHERE firebase_ID = ?',
+                [firebaseId]
+            );
+
+            if (users.length > 0) break;
+
+            // Wait for 500ms before retrying
+            await new Promise(resolve => setTimeout(resolve, 500));
+            retries--;
+        }
 
         if (users.length === 0) {
+            await connection.rollback();
             return res.status(404).json({
-                message: 'User not found'
+                message: 'User not found',
+                firebase_ID: firebaseId
             });
         }
 
         const mysqlUserId = users[0].user_ID;
-
-        // Format the start time
         const formattedStartTime = formatDateForMySQL(startTime || new Date());
 
         // Create new conversation
-        const [result] = await db.execute(
+        const [result] = await connection.execute(
             'INSERT INTO Conversations (user_ID, status, start_time) VALUES (?, ?, ?)',
             [mysqlUserId, status || 'active', formattedStartTime]
         );
+
+        await connection.commit();
 
         res.status(201).json({
             message: 'Conversation created successfully',
             conversationId: result.insertId
         });
     } catch (error) {
+        await connection.rollback();
         console.error('Error creating conversation:', error);
         res.status(500).json({
             message: 'Failed to create conversation',
             error: error.message
         });
+    } finally {
+        connection.release();
     }
 });
 

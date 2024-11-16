@@ -31,34 +31,75 @@ const ChatScreen = () => {
     const [loading, setLoading] = useState(false);
     const [conversationId, setConversationId] = useState(null);
     const [initialized, setInitialized] = useState(false);
+    const [initializationAttempts, setInitializationAttempts] = useState(0);
     const scrollViewRef = useRef(null);
-    const keyboardDidShowListener = useRef(null);
-    const keyboardDidHideListener = useRef(null);
+    const initializationTimeout = useRef(null);
 
     useEffect(() => {
-        // Only initialize conversation when user data is available
-        if (user && !initialized) {
-            initializeConversation();
-            setInitialized(true);
-        }
-
-        keyboardDidShowListener.current = Keyboard.addListener(
-            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-            () => scrollToBottom(true)
-        );
-        keyboardDidHideListener.current = Keyboard.addListener(
-            Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-            () => scrollToBottom(true)
-        );
-
+        // Clear any existing timeout on cleanup
         return () => {
-            keyboardDidShowListener.current?.remove();
-            keyboardDidHideListener.current?.remove();
-            if (conversationId) {
-                handleConversationEnd();
+            if (initializationTimeout.current) {
+                clearTimeout(initializationTimeout.current);
             }
         };
-    }, [user]);
+    }, []);
+
+    useEffect(() => {
+        const initializeConversation = async () => {
+            try {
+                if (!user?.uid) {
+                    console.log('No user ID available');
+                    return;
+                }
+
+                // Try to initialize the conversation
+                const result = await conversationService.createConversation(user.uid);
+
+                if (result.success) {
+                    setConversationId(result.conversationId);
+                    setInitialized(true);
+                    // Save initial welcome message
+                    await conversationService.addMessage(
+                        result.conversationId,
+                        INITIAL_MESSAGE.text,
+                        'ai'
+                    );
+                } else {
+                    // If failed and we haven't tried too many times, schedule another attempt
+                    if (initializationAttempts < 5) {
+                        console.log(`Retrying initialization attempt ${initializationAttempts + 1}`);
+                        initializationTimeout.current = setTimeout(() => {
+                            setInitializationAttempts(prev => prev + 1);
+                        }, 1000); // Wait 1 second before retrying
+                    } else {
+                        console.error('Failed to initialize conversation after multiple attempts');
+                        Alert.alert(
+                            'Error',
+                            'Failed to start conversation. Please try restarting the app.'
+                        );
+                    }
+                }
+            } catch (error) {
+                console.error('Error initializing conversation:', error);
+
+                if (error.message.includes('User not found') && initializationAttempts < 5) {
+                    console.log(`Retrying after User not found error - attempt ${initializationAttempts + 1}`);
+                    initializationTimeout.current = setTimeout(() => {
+                        setInitializationAttempts(prev => prev + 1);
+                    }, 1000);
+                } else {
+                    Alert.alert(
+                        'Error',
+                        'Failed to start conversation. Please try again later.'
+                    );
+                }
+            }
+        };
+        if (user && !initialized && initializationAttempts < 5) {
+            initializeConversation();
+        }
+
+    }, [user, initialized, initializationAttempts]);
 
     const initializeConversation = async () => {
         try {

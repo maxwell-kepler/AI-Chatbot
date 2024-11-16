@@ -5,28 +5,49 @@ export const conversationService = {
     // Create a new conversation session
     createConversation: async (firebaseId) => {
         try {
-            const response = await fetch(`${API_URL}/conversations`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    userId: firebaseId,
-                    status: 'active',
-                    startTime: new Date().toISOString()
-                })
-            });
+            // Add retry logic here too
+            let attempts = 0;
+            let lastError = null;
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to create conversation');
+            while (attempts < 3) {
+                try {
+                    const response = await fetch(`${API_URL}/conversations`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            userId: firebaseId,
+                            status: 'active',
+                            startTime: new Date().toISOString()
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        if (errorData.message === 'User not found' && attempts < 2) {
+                            // Wait before retrying
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                            attempts++;
+                            continue;
+                        }
+                        throw new Error(errorData.message || 'Failed to create conversation');
+                    }
+
+                    const data = await response.json();
+                    return {
+                        success: true,
+                        conversationId: data.conversationId
+                    };
+                } catch (error) {
+                    lastError = error;
+                    if (attempts >= 2) break;
+                    attempts++;
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
             }
 
-            const data = await response.json();
-            return {
-                success: true,
-                conversationId: data.conversationId
-            };
+            throw lastError || new Error('Failed to create conversation after multiple attempts');
         } catch (error) {
             console.error('Error creating conversation:', error);
             return {
