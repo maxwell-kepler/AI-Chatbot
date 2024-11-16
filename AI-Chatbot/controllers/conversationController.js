@@ -16,8 +16,8 @@ class ConversationController {
                 throw new Error('userId is required');
             }
 
-            // Get or wait for the MySQL user_ID using the firebase_ID with shorter retry intervals
-            let retries = 5; // Increase retries but decrease interval
+            // Get or wait for the MySQL user_ID using the firebase_ID
+            let retries = 5;
             let users;
 
             while (retries > 0) {
@@ -33,12 +33,20 @@ class ConversationController {
 
                 if (users.length > 0) break;
 
-                await new Promise(resolve => setTimeout(resolve, 200));
+                // If this is the first attempt, wait longer to allow for user creation
+                const waitTime = retries === 5 ? 1000 : 200;
+                await new Promise(resolve => setTimeout(resolve, waitTime));
                 retries--;
             }
 
             if (users.length === 0) {
-                throw new Error(`User not found after multiple retries: ${firebaseId}`);
+                await connection.rollback();
+                // Return a 409 Conflict status to indicate temporary unavailability
+                return res.status(409).json({
+                    success: false,
+                    error: 'User record not yet available. Please retry.',
+                    retryable: true
+                });
             }
 
             const mysqlUserId = users[0].user_ID;
