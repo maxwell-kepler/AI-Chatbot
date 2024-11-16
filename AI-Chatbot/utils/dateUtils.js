@@ -29,3 +29,8 @@ export const formatMessageTime = (timestamp) => {
         minute: '2-digit'
     });
 };
+
+export const formatDateForMySQL = (dateString) => {
+    const date = new Date(dateString);
+    return date.toISOString().slice(0, 19).replace('T', ' ');
+};

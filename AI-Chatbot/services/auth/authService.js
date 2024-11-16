@@ -9,33 +9,47 @@ import {
 } from 'firebase/auth';
 import { auth } from '../../config/firebase';
 import { userService } from '../database/userService';
+import { API_URL } from "../../config/api";
 
 class AuthService {
     async createAccount(email, password) {
         try {
+            // Create Firebase user
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const firebaseUser = userCredential.user;
 
-            try {
-                await userService.createUser({
+            // Create user in our database
+            const response = await fetch(`${API_URL}/users`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
                     firebaseId: firebaseUser.uid,
                     email: firebaseUser.email,
-                    name: email.split('@')[0], // Default name from email
+                    name: email.split('@')[0],
                     createAt: new Date().toISOString(),
                     lastLogin: new Date().toISOString()
-                });
+                })
+            });
 
-                return {
-                    success: true,
-                    user: firebaseUser
-                };
-            } catch (dbError) {
-                // If MySQL creation fails, delete the Firebase user
-                console.error('Failed to create MySQL user:', dbError);
+            if (!response.ok) {
+                // If database creation fails, delete the Firebase user
                 await firebaseUser.delete();
-                throw new Error('Failed to create user in database');
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to create user in database');
             }
+
+            const userData = await response.json();
+
+            return {
+                success: true,
+                user: firebaseUser,
+                userData: userData.data
+            };
+
         } catch (error) {
+            console.error('Auth error:', error);
             let errorMessage = 'Failed to create account';
 
             switch (error.code) {
@@ -44,9 +58,6 @@ class AuthService {
                     break;
                 case 'auth/invalid-email':
                     errorMessage = 'Invalid email address format';
-                    break;
-                case 'auth/operation-not-allowed':
-                    errorMessage = 'Email/password accounts are not enabled';
                     break;
                 case 'auth/weak-password':
                     errorMessage = 'Password should be at least 6 characters';
@@ -67,34 +78,26 @@ class AuthService {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const firebaseUser = userCredential.user;
 
-            try {
-                const dbUser = await userService.getUserByFirebaseId(firebaseUser.uid);
-
-                if (!dbUser.success) {
-                    // If no MySQL user exists, create one (recovery mechanism)
-                    await userService.createUser({
-                        firebaseId: firebaseUser.uid,
-                        email: firebaseUser.email,
-                        name: email.split('@')[0],
-                        createAt: new Date().toISOString(),
-                        lastLogin: new Date().toISOString()
-                    });
-                } else {
-                    await userService.updateLastLogin(firebaseUser.uid);
+            // Update last login in our database
+            const response = await fetch(`${API_URL}/users/firebase/${firebaseUser.uid}/login`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
                 }
+            });
 
-                return {
-                    success: true,
-                    user: firebaseUser
-                };
-            } catch (dbError) {
-                console.error('Database error during sign in:', dbError);
-                return {
-                    success: false,
-                    error: 'Failed to sync user data'
-                };
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('Database sync error:', errorData);
             }
+
+            return {
+                success: true,
+                user: firebaseUser
+            };
+
         } catch (error) {
+            console.error('Sign in error:', error);
             let errorMessage = 'Failed to sign in';
 
             switch (error.code) {
@@ -109,9 +112,6 @@ class AuthService {
                     break;
                 case 'auth/wrong-password':
                     errorMessage = 'Invalid password';
-                    break;
-                case 'auth/too-many-requests':
-                    errorMessage = 'Too many failed attempts. Please try again later';
                     break;
                 default:
                     errorMessage = error.message;
