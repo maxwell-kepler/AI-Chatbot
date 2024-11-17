@@ -1,15 +1,17 @@
 // screens/settings/SettingsScreen/index.js
 import React, { useState } from 'react';
 import { View, Alert, Text } from 'react-native';
-import { LogOut, Bell, Trash2, Lock } from 'lucide-react-native';
+import { LogOut, Bell, Trash2, Lock, X } from 'lucide-react-native';
 import { theme } from '../../../styles/theme';
 import Button, { BUTTON_VARIANTS } from '../../../components/common/Button';
 import ResetPasswordModal from '../../../components/specific/Settings/ResetPasswordModal';
+import DeleteAccountModal from '../../../components/specific/Settings/DeleteAccountModal';
 import styles from './styles';
 import authService from '../../../services/auth/authService';
 
 const SettingsScreen = () => {
     const [resetPasswordVisible, setResetPasswordVisible] = useState(false);
+    const [deleteAccountVisible, setDeleteAccountVisible] = useState(false);
 
     const handleLogout = async () => {
         Alert.alert(
@@ -29,26 +31,6 @@ const SettingsScreen = () => {
                         } catch (error) {
                             Alert.alert('Error', 'Failed to logout. Please try again.');
                         }
-                    }
-                }
-            ]
-        );
-    };
-
-    const handleDeleteAccount = () => {
-        Alert.alert(
-            "Delete Account",
-            "Are you sure you want to delete your account? This action cannot be undone.",
-            [
-                {
-                    text: "Cancel",
-                    style: "cancel"
-                },
-                {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: () => {
-                        // TODO
                     }
                 }
             ]
@@ -95,13 +77,13 @@ const SettingsScreen = () => {
 
             <View style={styles.dangerSection}>
                 <View style={styles.sectionHeader}>
-                    <Text preset="header3" style={styles.sectionTitle}>Danger Zone</Text>
+                    <Text style={styles.sectionTitle}>Danger Zone</Text>
                 </View>
                 <Button
                     title="Delete Account"
                     variant={BUTTON_VARIANTS.DANGER}
                     leftIcon={<Trash2 size={20} color={theme.colors.neutral.white} />}
-                    onPress={handleDeleteAccount}
+                    onPress={() => setDeleteAccountVisible(true)}
                     style={styles.button}
                 />
             </View>
@@ -109,6 +91,11 @@ const SettingsScreen = () => {
             <ResetPasswordModal
                 visible={resetPasswordVisible}
                 onClose={() => setResetPasswordVisible(false)}
+            />
+
+            <DeleteAccountModal
+                visible={deleteAccountVisible}
+                onClose={() => setDeleteAccountVisible(false)}
             />
         </View>
     );

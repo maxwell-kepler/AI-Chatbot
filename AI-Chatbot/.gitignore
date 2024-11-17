@@ -39,3 +39,4 @@ service-account-key.json
 firebase.js
 api.config.js
 database.js
+api.*.js

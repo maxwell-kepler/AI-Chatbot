@@ -134,6 +134,118 @@ class UserController {
             connection.release();
         }
     }
+
+    async getActiveConversations(req, res, next) {
+        const connection = await db.getConnection();
+        try {
+            const { firebaseId } = req.params;
+
+            const [conversations] = await connection.execute(`
+                SELECT c.conversation_ID
+                FROM Conversations c
+                JOIN Users u ON c.user_ID = u.user_ID
+                WHERE u.firebase_ID = ?
+                AND c.status IN ('active', 'liminal')
+            `, [firebaseId]);
+
+            res.json({
+                success: true,
+                conversations
+            });
+
+        } catch (error) {
+            console.error('Error fetching active conversations:', error);
+            next(error);
+        } finally {
+            connection.release();
+        }
+    }
+
+    async deleteUserAccount(req, res, next) {
+        const connection = await db.getConnection();
+        try {
+            await connection.beginTransaction();
+            const { firebaseId } = req.params;
+
+            const [users] = await connection.execute(
+                'SELECT user_ID FROM Users WHERE firebase_ID = ?',
+                [firebaseId]
+            );
+
+            if (users.length === 0) {
+                throw new Error('User not found');
+            }
+
+            const userId = users[0].user_ID;
+
+            await connection.execute(
+                'DELETE FROM Emotional_Patterns WHERE user_ID = ?',
+                [userId]
+            );
+
+            await connection.execute(
+                'DELETE FROM Moods WHERE user_ID = ?',
+                [userId]
+            );
+
+            await connection.execute(
+                'DELETE FROM Crisis_Events WHERE user_ID = ?',
+                [userId]
+            );
+
+            await connection.execute(
+                'DELETE FROM Accessed_By WHERE user_ID = ?',
+                [userId]
+            );
+
+            const [conversations] = await connection.execute(
+                'SELECT conversation_ID FROM Conversations WHERE user_ID = ?',
+                [userId]
+            );
+
+            for (const conv of conversations) {
+                // set summary_ID to NULL in Conversations to break circular reference
+                await connection.execute(
+                    'UPDATE Conversations SET summary_ID = NULL WHERE conversation_ID = ?',
+                    [conv.conversation_ID]
+                );
+
+                await connection.execute(
+                    'DELETE FROM Messages WHERE conversation_ID = ?',
+                    [conv.conversation_ID]
+                );
+
+                await connection.execute(
+                    'DELETE FROM Conversation_Summaries WHERE conversation_ID = ?',
+                    [conv.conversation_ID]
+                );
+            }
+            await connection.execute(
+                'DELETE FROM Conversations WHERE user_ID = ?',
+                [userId]
+            );
+
+            await connection.execute(
+                'DELETE FROM Users WHERE user_ID = ?',
+                [userId]
+            );
+
+            await connection.execute(
+                'DELETE FROM Firebase_Login WHERE ID = ?',
+                [firebaseId]
+            );
+
+            await connection.commit();
+            res.json({ success: true });
+
+        } catch (error) {
+            await connection.rollback();
+            console.error('Error deleting user account:', error);
+            next(error);
+        } finally {
+            connection.release();
+        }
+    }
 }
 
 module.exports = new UserController();

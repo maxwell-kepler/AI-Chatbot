@@ -1,7 +1,7 @@
 // server.js
 const app = require('./server-app');
-const PORT = 3000;
+const { PORT, LOCAL_IP } = require('./config/api.server');
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\nServer running on http://0.0.0.0:${PORT}`);
+app.listen(PORT, LOCAL_IP, () => {
+    console.log(`\nServer running on http://${LOCAL_IP}:${PORT}`);
 });

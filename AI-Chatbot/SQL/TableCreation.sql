@@ -1,7 +1,7 @@
 -- SQL/TableCreation.sql
 USE `mental_health_support`;
 
-
+DROP TABLE IF EXISTS `Conversation_Summaries`;
 DROP TABLE IF EXISTS `Emotional_Patterns`;
 DROP TABLE IF EXISTS `Moods`;
 DROP TABLE IF EXISTS `Crisis_Events`;
@@ -14,6 +14,8 @@ DROP TABLE IF EXISTS `Used_In`; #Drop before Resources, Tags
 DROP TABLE IF EXISTS `Resources`; #Drop before Categories
 DROP TABLE IF EXISTS `Categories`;
 DROP TABLE IF EXISTS `Tags`;
+
+
 
 -- Tags table
 CREATE TABLE Tags (
@@ -85,9 +87,11 @@ CREATE TABLE Conversations (
     end_time TIMESTAMP,
     risk_level ENUM('low', 'medium', 'high') DEFAULT 'low',
     summary TEXT,
-    status ENUM('active', 'completed', 'interrupted') DEFAULT 'active',
+    status ENUM('active', 'liminal', 'completed') DEFAULT 'active',
     user_ID VARCHAR(128),
-    FOREIGN KEY (user_ID) REFERENCES Users(user_ID)
+    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_ID) REFERENCES Users(user_ID),
+    INDEX idx_status_last_activity (status, last_activity)
 );
 
 -- Messages table
@@ -139,6 +143,23 @@ CREATE TABLE Emotional_Patterns (
     user_ID VARCHAR(128),
     FOREIGN KEY (user_ID) REFERENCES Users(user_ID)
 );
+
+CREATE TABLE Conversation_Summaries (
+    summary_ID INT PRIMARY KEY AUTO_INCREMENT,
+    conversation_ID INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    emotions JSON, -- Store as array of strings
+    main_concerns JSON, -- Store as array of strings
+    progress_notes JSON, -- Store as array of strings
+    recommendations JSON, -- Store as array of strings
+    raw_summary TEXT, -- Store the original formatted text version
+    FOREIGN KEY (conversation_ID) REFERENCES Conversations(conversation_ID),
+    INDEX idx_conversation (conversation_ID)
+);
+
+ALTER TABLE Conversations 
+ADD COLUMN summary_ID INT,
+ADD FOREIGN KEY (summary_ID) REFERENCES Conversation_Summaries(summary_ID);
 
 -- Create indexes for better query performance
 CREATE INDEX idx_resources_category ON Resources(category_ID);

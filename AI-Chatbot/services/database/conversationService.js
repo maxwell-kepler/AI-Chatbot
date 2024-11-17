@@ -1,7 +1,7 @@
 // services/database/conversationService.js
-import { API_URL } from "../../config/api";
+const { API_URL } = require("../../config/api.server");
 
-export const conversationService = {
+const conversationService = {
     createConversation: async (firebaseId) => {
         let attempts = 0;
         const maxAttempts = 3;
@@ -25,7 +25,6 @@ export const conversationService = {
                 const data = await response.json();
 
                 if (!response.ok) {
-                    // If it's a retryable error and not our last attempt, retry
                     if (data.retryable && attempts < maxAttempts - 1) {
                         console.log('Retryable error, waiting before next attempt...');
                         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -38,7 +37,8 @@ export const conversationService = {
                 console.log('Conversation created successfully:', data);
                 return {
                     success: true,
-                    conversationId: data.conversationId
+                    conversationId: data.conversationId,
+                    status: 'active'
                 };
 
             } catch (error) {
@@ -58,6 +58,74 @@ export const conversationService = {
             success: false,
             error: 'Failed to create conversation after multiple attempts'
         };
+    },
+
+    updateConversationStatus: async (conversationId, newStatus, summary = null) => {
+        try {
+            const body = {
+                status: newStatus,
+                summary: summary
+            };
+
+            if (newStatus === 'completed') {
+                body.endTime = new Date().toISOString();
+            }
+
+            const response = await fetch(
+                `${API_URL}/conversations/${conversationId}/status`,
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(body)
+                }
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to update conversation status');
+            }
+
+            const data = await response.json();
+            return {
+                success: true,
+                data: data.data
+            };
+
+        } catch (error) {
+            console.error('Error updating conversation status:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    },
+
+    generateConversationSummary: async (conversationId) => {
+        try {
+            const response = await fetch(
+                `${API_URL}/conversations/${conversationId}/summary`
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to generate summary');
+            }
+
+            const data = await response.json();
+            return {
+                success: true,
+                summary: data.data.summary
+            };
+
+        } catch (error) {
+            console.error('Error generating conversation summary:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
     },
 
     addMessage: async (conversationId, content, senderType, emotionalState = null) => {
@@ -106,3 +174,4 @@ export const conversationService = {
         }
     }
 };
+module.exports = { conversationService };

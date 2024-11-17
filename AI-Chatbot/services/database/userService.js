@@ -1,5 +1,5 @@
 // services/database/userService.js
-import { API_URL } from "../../config/api";
+import { API_URL } from "../../config/api.client";
 
 export const userService = {
     createUser: async (userData) => {

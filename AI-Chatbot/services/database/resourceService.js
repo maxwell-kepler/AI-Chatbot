@@ -1,5 +1,5 @@
 // services/database/resourceService.js
-import { API_URL } from "../../config/api";
+import { API_URL } from "../../config/api.client";
 
 export const resourceService = {
     fetchCategories: async () => {
