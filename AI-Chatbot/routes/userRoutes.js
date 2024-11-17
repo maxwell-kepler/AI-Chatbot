@@ -7,5 +7,6 @@ router.post('/', userController.createUser);
 router.get('/firebase/:firebaseId', userController.getUserByFirebaseId);
 router.put('/firebase/:firebaseId/login', userController.updateLastLogin);
 router.get('/firebase/:firebaseId/active-conversations', userController.getActiveConversations);
+router.delete('/firebase/:firebaseId', userController.deleteUserAccount);
 
 module.exports = router;

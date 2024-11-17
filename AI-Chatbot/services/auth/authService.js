@@ -5,7 +5,8 @@ import {
     sendPasswordResetEmail,
     EmailAuthProvider,
     reauthenticateWithCredential,
-    updatePassword
+    updatePassword,
+    deleteUser
 } from 'firebase/auth';
 import { auth } from '../../config/firebase';
 import { userService } from '../database/userService';
@@ -271,6 +272,60 @@ class AuthService {
             return {
                 success: false,
                 error: 'An unexpected error occurred'
+            };
+        }
+    }
+
+    async deleteAccount(currentPassword) {
+        try {
+            const user = auth.currentUser;
+            if (!user || !user.email) {
+                return {
+                    success: false,
+                    error: 'No authenticated user found'
+                };
+            }
+
+            // re-authenticate the user
+            const credential = EmailAuthProvider.credential(
+                user.email,
+                currentPassword
+            );
+
+            try {
+                await reauthenticateWithCredential(user, credential);
+            } catch (error) {
+                console.error('Reauthentication error:', error);
+                return {
+                    success: false,
+                    error: 'Current password is incorrect'
+                };
+            }
+
+            // delete MySQL data first
+            const response = await fetch(`${API_URL}/users/firebase/${user.uid}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to delete user data from database');
+            }
+
+            await deleteUser(user); // delete Firebase account once MySQL data is deleted
+
+            return {
+                success: true,
+                message: 'Account successfully deleted'
+            };
+
+        } catch (error) {
+            console.error('Delete account error:', error);
+            return {
+                success: false,
+                error: error.message
             };
         }
     }
