@@ -1,7 +1,7 @@
 // services/database/conversationService.js
-import { API_URL } from "../../config/api";
+const { API_URL } = require("../../config/api.server");
 
-export const conversationService = {
+const conversationService = {
     createConversation: async (firebaseId) => {
         let attempts = 0;
         const maxAttempts = 3;
@@ -38,7 +38,7 @@ export const conversationService = {
                 return {
                     success: true,
                     conversationId: data.conversationId,
-                    status: 'active'  // Include initial status in response
+                    status: 'active'
                 };
 
             } catch (error) {
@@ -174,3 +174,4 @@ export const conversationService = {
         }
     }
 };
+module.exports = { conversationService };

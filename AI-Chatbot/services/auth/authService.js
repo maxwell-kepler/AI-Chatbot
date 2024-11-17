@@ -9,7 +9,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../../config/firebase';
 import { userService } from '../database/userService';
-import { API_URL } from "../../config/api";
+import { API_URL } from "../../config/api.client";
 
 class AuthService {
     async createAccount(email, password) {
@@ -113,6 +113,9 @@ class AuthService {
                 case 'auth/wrong-password':
                     errorMessage = 'Invalid password';
                     break;
+                case 'auth/invalid-credential':
+                    errorMessage = 'Invalid email or password';
+                    break;
                 default:
                     errorMessage = error.message;
             }
@@ -123,7 +126,6 @@ class AuthService {
             };
         }
     }
-
     async forgotPassword(email) {
         try {
             await sendPasswordResetEmail(auth, email);

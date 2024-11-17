@@ -2,8 +2,18 @@
 const db = require('../config/database');
 const { formatDateForMySQL } = require('../utils/dateFormatter');
 const summaryService = require('../services/summary/summaryService');
+const { parseSummary } = require('../utils/summaryParser');
 
 class ConversationController {
+    constructor() {
+        // Bind all methods to ensure proper 'this' context
+        this.createConversation = this.createConversation.bind(this);
+        this.addMessage = this.addMessage.bind(this);
+        this.updateConversationStatus = this.updateConversationStatus.bind(this);
+        this.getConversationMessages = this.getConversationMessages.bind(this);
+        this.generateSummary = this.generateSummary.bind(this);
+    }
+
     createConversation = async (req, res, next) => {
         const connection = await db.getConnection();
         console.log('Create conversation request received:', req.body);
@@ -261,6 +271,7 @@ class ConversationController {
         }
     }
 
+    // Get messages method
     getConversationMessages = async (req, res, next) => {
         try {
             const { conversationId } = req.params;
@@ -290,12 +301,16 @@ class ConversationController {
         }
     }
 
+
     generateSummary = async (req, res, next) => {
+        const connection = await db.getConnection();
         try {
+            await connection.beginTransaction();
+
             const { conversationId } = req.params;
 
-            // Fetch all messages for this conversation
-            const [messages] = await db.execute(
+            // Fetch messages
+            const [messages] = await connection.execute(
                 `SELECT 
                     content,
                     sender_type,
@@ -308,6 +323,7 @@ class ConversationController {
             );
 
             if (messages.length === 0) {
+                await connection.rollback();
                 return res.json({
                     success: true,
                     data: {
@@ -317,28 +333,57 @@ class ConversationController {
             }
 
             // Generate AI summary
-            const summaryResult = await summaryService.generateSummary(messages);
+            const aiSummaryResult = await summaryService.generateSummary(messages);
 
-            if (!summaryResult.success) {
+            if (!aiSummaryResult.success) {
                 throw new Error('Failed to generate AI summary');
             }
 
-            // Save the summary to the conversation
-            await db.execute(
-                'UPDATE Conversations SET summary = ? WHERE conversation_ID = ?',
-                [summaryResult.summary, conversationId]
+            // Parse the summary into structured format
+            const parsedResult = parseSummary(aiSummaryResult.summary);
+
+            if (!parsedResult.success) {
+                throw new Error('Failed to parse summary structure');
+            }
+
+            // Save structured summary
+            const [dbInsertResult] = await connection.execute(
+                `INSERT INTO Conversation_Summaries 
+                (conversation_ID, emotions, main_concerns, progress_notes, 
+                recommendations, raw_summary)
+                VALUES (?, ?, ?, ?, ?, ?)`,
+                [
+                    conversationId,
+                    JSON.stringify(parsedResult.parsed.emotions),
+                    JSON.stringify(parsedResult.parsed.main_concerns),
+                    JSON.stringify(parsedResult.parsed.progress_notes),
+                    JSON.stringify(parsedResult.parsed.recommendations),
+                    parsedResult.raw
+                ]
             );
+
+            // Update conversation with summary reference
+            await connection.execute(
+                'UPDATE Conversations SET summary_ID = ? WHERE conversation_ID = ?',
+                [dbInsertResult.insertId, conversationId]
+            );
+
+            await connection.commit();
 
             res.json({
                 success: true,
                 data: {
-                    summary: summaryResult.summary
+                    summary: parsedResult.raw,
+                    structured: parsedResult.parsed
                 }
             });
 
         } catch (error) {
-            console.error('Error generating summary:', error);
+            await connection.rollback();
+            console.error('Error generating structured summary:', error);
             next(error);
+        } finally {
+            connection.release();
         }
     }
 }
