@@ -134,6 +134,32 @@ class UserController {
             connection.release();
         }
     }
+
+    async getActiveConversations(req, res, next) {
+        const connection = await db.getConnection();
+        try {
+            const { firebaseId } = req.params;
+
+            const [conversations] = await connection.execute(`
+                SELECT c.conversation_ID
+                FROM Conversations c
+                JOIN Users u ON c.user_ID = u.user_ID
+                WHERE u.firebase_ID = ?
+                AND c.status IN ('active', 'liminal')
+            `, [firebaseId]);
+
+            res.json({
+                success: true,
+                conversations
+            });
+
+        } catch (error) {
+            console.error('Error fetching active conversations:', error);
+            next(error);
+        } finally {
+            connection.release();
+        }
+    }
 }
 
 module.exports = new UserController();

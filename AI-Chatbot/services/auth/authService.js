@@ -10,6 +10,7 @@ import {
 import { auth } from '../../config/firebase';
 import { userService } from '../database/userService';
 import { API_URL } from "../../config/api.client";
+import { conversationService } from '../database/conversationService';
 
 class AuthService {
     async createAccount(email, password) {
@@ -161,6 +162,34 @@ class AuthService {
         try {
             const currentUser = auth.currentUser;
             if (currentUser) {
+                // Get active conversations for the user
+                const response = await fetch(
+                    `${API_URL}/users/firebase/${currentUser.uid}/active-conversations`
+                );
+
+                if (response.ok) {
+                    const { conversations } = await response.json();
+
+                    // Complete all active conversations
+                    await Promise.all(conversations.map(async (conv) => {
+                        try {
+                            const summaryResult = await conversationService.generateConversationSummary(
+                                conv.conversation_ID
+                            );
+
+                            if (summaryResult.success) {
+                                await conversationService.updateConversationStatus(
+                                    conv.conversation_ID,
+                                    'completed',
+                                    summaryResult.summary
+                                );
+                            }
+                        } catch (error) {
+                            console.error(`Error completing conversation ${conv.conversation_ID}:`, error);
+                        }
+                    }));
+                }
+
                 await userService.updateLastLogin(currentUser.uid);
             }
             return auth.signOut();

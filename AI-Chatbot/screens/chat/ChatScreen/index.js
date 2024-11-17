@@ -36,6 +36,7 @@ const ChatScreen = () => {
     const scrollViewRef = useRef(null);
     const isFocused = useIsFocused();
     const appStateRef = useRef(AppState.currentState);
+    const backgroundTimerRef = useRef(null);
 
     // Initialize conversation only when user sends first message
     const initializeConversation = async () => {
@@ -60,12 +61,16 @@ const ChatScreen = () => {
         }
     };
 
-    // Handle app state changes (background/foreground)
     useEffect(() => {
         const subscription = AppState.addEventListener('change', nextAppState => {
             if (
-                appStateRef.current.match(/active|foreground/) &&
-                nextAppState === 'background'
+                appStateRef.current.match(/inactive|background/) &&
+                nextAppState === 'active'
+            ) {
+                clearTimeout(backgroundTimerRef.current);
+            } else if (
+                appStateRef.current === 'active' &&
+                nextAppState.match(/inactive|background/)
             ) {
                 handleAppBackground();
             }
@@ -74,13 +79,14 @@ const ChatScreen = () => {
 
         return () => {
             subscription.remove();
+            if (backgroundTimerRef.current) {
+                clearTimeout(backgroundTimerRef.current);
+            }
         };
     }, [conversationId]);
 
-    // Handle screen focus changes
     useFocusEffect(
         React.useCallback(() => {
-            // No need to do anything on focus if there's no conversation yet
             if (conversationId) {
                 handleScreenFocus();
             }
@@ -93,15 +99,18 @@ const ChatScreen = () => {
         }, [conversationId])
     );
 
+
     const handleScreenFocus = async () => {
         if (!conversationId) return;
 
         try {
-            // Transition from liminal to active
-            await conversationService.updateConversationStatus(
-                conversationId,
-                'active'
-            );
+            if (currentStatus === 'liminal') {
+                await conversationService.updateConversationStatus(
+                    conversationId,
+                    'active'
+                );
+                setCurrentStatus('active');
+            }
         } catch (error) {
             console.error('Error transitioning to active state:', error);
         }
@@ -111,7 +120,6 @@ const ChatScreen = () => {
         if (!conversationId) return;
 
         try {
-            // Generate summary and transition to liminal
             const summaryResult = await conversationService.generateConversationSummary(
                 conversationId
             );
@@ -122,6 +130,7 @@ const ChatScreen = () => {
                     'liminal',
                     summaryResult.summary
                 );
+                setCurrentStatus('liminal');
             }
         } catch (error) {
             console.error('Error transitioning to liminal state:', error);
@@ -131,22 +140,26 @@ const ChatScreen = () => {
     const handleAppBackground = async () => {
         if (!conversationId) return;
 
-        try {
-            const summaryResult = await conversationService.generateConversationSummary(
-                conversationId
-            );
-
-            if (summaryResult.success) {
-                await conversationService.updateConversationStatus(
-                    conversationId,
-                    'completed',
-                    summaryResult.summary
+        backgroundTimerRef.current = setTimeout(async () => {
+            try {
+                const summaryResult = await conversationService.generateConversationSummary(
+                    conversationId
                 );
+
+                if (summaryResult.success) {
+                    await conversationService.updateConversationStatus(
+                        conversationId,
+                        'completed',
+                        summaryResult.summary
+                    );
+                    setCurrentStatus('completed');
+                }
+            } catch (error) {
+                console.error('Error completing conversation:', error);
             }
-        } catch (error) {
-            console.error('Error completing conversation:', error);
-        }
+        }, 300000); // 5 minutes timeout, 300000 ms
     };
+
 
 
     const scrollToBottom = (animated = true) => {
