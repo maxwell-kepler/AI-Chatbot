@@ -400,6 +400,88 @@ class ConversationController {
             next(error);
         }
     }
+
+    recordCrisisEvent = async (req, res, next) => {
+        const connection = await db.getConnection();
+        try {
+            await connection.beginTransaction();
+
+            const { conversationId } = req.params;
+            const { userId: firebaseId, severityLevel, notes, timestamp } = req.body;
+
+            const [users] = await connection.execute(
+                'SELECT user_ID FROM Users WHERE firebase_ID = ?',
+                [firebaseId]
+            );
+
+            if (users.length === 0) {
+                throw new Error('User not found');
+            }
+
+            const mysqlUserId = users[0].user_ID;
+
+            const [result] = await connection.execute(
+                `INSERT INTO Crisis_Events 
+                (conversation_ID, user_ID, severity_level, action_taken, timestamp)
+                VALUES (?, ?, ?, ?, ?)`,
+                [
+                    conversationId,
+                    mysqlUserId,
+                    severityLevel,
+                    notes,
+                    formatDateForMySQL(timestamp)
+                ]
+            );
+
+            await connection.commit();
+
+            res.status(201).json({
+                success: true,
+                data: {
+                    eventId: result.insertId,
+                    conversationId,
+                    severityLevel,
+                    timestamp
+                }
+            });
+
+        } catch (error) {
+            await connection.rollback();
+            next(error);
+        } finally {
+            connection.release();
+        }
+    }
+
+    updateRiskLevel = async (req, res, next) => {
+        const connection = await db.getConnection();
+        try {
+            const { conversationId } = req.params;
+            const { riskLevel } = req.body;
+
+            if (!['low', 'medium', 'high'].includes(riskLevel)) {
+                throw new Error('Invalid risk level');
+            }
+
+            await connection.execute(
+                'UPDATE Conversations SET risk_level = ? WHERE conversation_ID = ?',
+                [riskLevel, conversationId]
+            );
+
+            res.json({
+                success: true,
+                data: {
+                    conversationId,
+                    riskLevel
+                }
+            });
+
+        } catch (error) {
+            next(error);
+        } finally {
+            connection.release();
+        }
+    }
 }
 
 module.exports = new ConversationController();

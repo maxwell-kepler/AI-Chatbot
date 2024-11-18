@@ -186,6 +186,71 @@ const conversationService = {
                 error: error.message
             };
         }
+    },
+
+    recordCrisisEvent: async (conversationId, userId, severityLevel, notes) => {
+        try {
+            const response = await fetch(`${API_URL}/conversations/${conversationId}/crisis-events`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    userId,
+                    severityLevel,
+                    notes,
+                    timestamp: new Date().toISOString()
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to record crisis event');
+            }
+
+            const data = await response.json();
+            return {
+                success: true,
+                data: data.data
+            };
+        } catch (error) {
+            console.error('Error recording crisis event:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    },
+
+    updateRiskLevel: async (conversationId, riskLevel) => {
+        try {
+            const response = await fetch(`${API_URL}/conversations/${conversationId}/risk-level`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    riskLevel
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to update risk level');
+            }
+
+            const data = await response.json();
+            return {
+                success: true,
+                data: data.data
+            };
+        } catch (error) {
+            console.error('Error updating risk level:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
     }
 };
 module.exports = { conversationService };
