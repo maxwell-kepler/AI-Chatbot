@@ -1,7 +1,7 @@
 // screens/tracking/TrackingScreen/index.js
 import React from 'react';
 import { View, ScrollView, Text, Dimensions } from 'react-native';
-import { LineChart, PieChart } from 'react-native-chart-kit';
+import { PieChart } from 'react-native-chart-kit';
 import { theme } from '../../../styles/theme';
 import styles from './styles';
 
