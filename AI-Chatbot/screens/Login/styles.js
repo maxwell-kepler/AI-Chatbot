@@ -1,6 +1,6 @@
-// screens/auth/Login/styles.js
+// screens/Login/styles.js
 import { StyleSheet } from 'react-native';
-import { theme } from '../../../styles/theme';
+import { theme } from '../../styles/theme';
 
 export default StyleSheet.create({
     container: {

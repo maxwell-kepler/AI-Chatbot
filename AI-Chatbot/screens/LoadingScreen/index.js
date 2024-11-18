@@ -1,8 +1,8 @@
-// screens/common/LoadingScreen/index.js
+// screens/LoadingScreen/index.js
 import React from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import styles from './styles';
-import { colors } from '../../../styles/colors';
+import { colors } from '../../styles/colors';
 
 const LoadingScreen = () => {
     return (

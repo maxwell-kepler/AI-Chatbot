@@ -1,6 +1,6 @@
-// screens/resources/ResourcesScreen/styles.js
+// screens/ResourcesScreen/styles.js
 import { StyleSheet, Dimensions } from 'react-native';
-import { theme } from '../../../styles/theme';
+import { theme } from '../../styles/theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 

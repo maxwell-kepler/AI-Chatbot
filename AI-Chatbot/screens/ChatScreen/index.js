@@ -1,3 +1,4 @@
+// screens/ChatScreen/index.js
 import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
@@ -10,16 +11,16 @@ import {
     Alert,
     AppState
 } from 'react-native';
-import { useAuth } from '../../../hooks/useAuth';
+import { useAuth } from '../../hooks/useAuth';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
-import { theme } from '../../../styles/theme';
-import ChatBubble from '../../../components/specific/Chat/ChatBubble';
-import MessageInput from '../../../components/specific/Chat/MessageInput';
-import { chatWithGemini } from '../../../services/gemini/geminiService';
-import { conversationService } from '../../../services/database/conversationService';
-import LoadingScreen from '../../common/LoadingScreen';
+import { theme } from '../../styles/theme';
+import ChatBubble from '../../components/specific/Chat/ChatBubble';
+import MessageInput from '../../components/specific/Chat/MessageInput';
+import { chatWithGemini } from '../../services/gemini/geminiService';
+import { conversationService } from '../../services/database/conversationService';
+import LoadingScreen from '../LoadingScreen';
 import styles from './styles';
-import { WELCOME_MESSAGE } from '../../../config/promptConfig';
+import { WELCOME_MESSAGE } from '../../config/promptConfig';
 
 
 

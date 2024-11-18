@@ -1,4 +1,4 @@
-// screens/tools/BreathingScreen/index.js
+// screens/BreathingScreen/index.js
 import React from 'react';
 import { View, ScrollView, Text } from 'react-native';
 import styles from './styles';

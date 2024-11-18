@@ -1,8 +1,8 @@
-// screens/tracking/TrackingScreen/index.js
+// screens/TrackingScreen/index.js
 import React from 'react';
 import { View, ScrollView, Text, Dimensions } from 'react-native';
-import { LineChart, PieChart } from 'react-native-chart-kit';
-import { theme } from '../../../styles/theme';
+import { PieChart } from 'react-native-chart-kit';
+import { theme } from '../../styles/theme';
 import styles from './styles';
 
 // Get screen width and calculate chart width with padding

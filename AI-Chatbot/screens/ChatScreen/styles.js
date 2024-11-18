@@ -1,6 +1,6 @@
-// screens/chat/ChatScreen/styles.js
-import { StyleSheet, Platform } from 'react-native';
-import { theme } from '../../../styles/theme';
+// screens/ChatScreen/styles.js
+import { StyleSheet } from 'react-native';
+import { theme } from '../../styles/theme';
 
 export default StyleSheet.create({
     container: {
