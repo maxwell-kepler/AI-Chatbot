@@ -3,7 +3,11 @@ const express = require('express');
 const router = express.Router();
 const resourceController = require('../controllers/resourceController');
 
-console.log('Setting up resource routes');
+console.log('Resource controller methods:', {
+    getAllResources: !!resourceController.getAllResources,
+    searchResources: !!resourceController.searchResources,
+    getResourcesByCategory: !!resourceController.getResourcesByCategory,
+}, '\n');
 
 router.get('/', resourceController.getAllResources);
 router.get('/search', resourceController.searchResources);

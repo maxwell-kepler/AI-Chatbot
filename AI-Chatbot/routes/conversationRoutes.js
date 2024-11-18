@@ -12,7 +12,7 @@ console.log('Conversation controller methods:', {
     getConversationMessages: !!conversationController.getConversationMessages,
     generateSummary: !!conversationController.generateSummary,
     getLatestSummary: !!conversationController.getLatestSummary
-});
+}, '\n');
 
 router.post('/', conversationController.createConversation);
 router.post('/:conversationId/messages', conversationController.addMessage);
