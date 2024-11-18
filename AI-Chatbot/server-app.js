@@ -35,7 +35,11 @@ app.use((req, res) => {
 
 // Error handler
 app.use((err, req, res, next) => {
-    console.error('Error:', err);
+    // Only log errors in non-test environment
+    if (process.env.NODE_ENV !== 'test') {
+        console.error('Error:', err);
+    }
+
     res.status(500).json({
         success: false,
         error: err.message
