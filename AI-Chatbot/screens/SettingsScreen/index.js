@@ -1,7 +1,7 @@
 // screens/SettingsScreen/index.js
 import React, { useState } from 'react';
 import { View, Alert, Text } from 'react-native';
-import { LogOut, Bell, Trash2, Lock } from 'lucide-react-native';
+import { LogOut, Trash2, Lock } from 'lucide-react-native';
 import { theme } from '../../styles/theme';
 import Button, { BUTTON_VARIANTS } from '../../components/common/Button';
 import ResetPasswordModal from '../../components/specific/Settings/ResetPasswordModal';
@@ -39,21 +39,6 @@ const SettingsScreen = () => {
 
     return (
         <View style={styles.container}>
-            <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                    <Text preset="header3" style={styles.sectionTitle}>App Settings</Text>
-                </View>
-                <Button
-                    title="Notification Settings"
-                    variant={BUTTON_VARIANTS.OUTLINE}
-                    leftIcon={<Bell size={20} color={theme.colors.primary.main} />}
-                    onPress={() => {
-                        // TODO
-                    }}
-                    style={styles.button}
-                />
-            </View>
-
             <View style={styles.section}>
                 <View style={styles.sectionHeader}>
                     <Text preset="header3" style={styles.sectionTitle}>Account Settings</Text>
