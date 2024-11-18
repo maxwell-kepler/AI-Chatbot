@@ -1,6 +1,8 @@
 -- SQL/TableCreation.sql
 USE `mental_health_support`;
 
+
+
 DROP TABLE IF EXISTS `Conversation_Summaries`;
 DROP TABLE IF EXISTS `Emotional_Patterns`;
 DROP TABLE IF EXISTS `Moods`;
@@ -153,13 +155,9 @@ CREATE TABLE Conversation_Summaries (
     progress_notes JSON, -- Store as array of strings
     recommendations JSON, -- Store as array of strings
     raw_summary TEXT, -- Store the original formatted text version
-    FOREIGN KEY (conversation_ID) REFERENCES Conversations(conversation_ID),
+    FOREIGN KEY (conversation_ID) REFERENCES Conversations(conversation_ID) ON DELETE CASCADE,
     INDEX idx_conversation (conversation_ID)
 );
-
-ALTER TABLE Conversations 
-ADD COLUMN summary_ID INT,
-ADD FOREIGN KEY (summary_ID) REFERENCES Conversation_Summaries(summary_ID);
 
 -- Create indexes for better query performance
 CREATE INDEX idx_resources_category ON Resources(category_ID);

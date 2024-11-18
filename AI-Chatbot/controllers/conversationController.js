@@ -203,7 +203,7 @@ class ConversationController {
             await connection.beginTransaction();
 
             const { conversationId } = req.params;
-            const { status, summary } = req.body;
+            const { status } = req.body;
 
             // Validate the new status
             const validStatuses = ['active', 'liminal', 'completed'];
@@ -228,10 +228,7 @@ class ConversationController {
                 return res.json({
                     success: true,
                     message: 'Conversation status unchanged',
-                    data: {
-                        status: currentStatus,
-                        summary: summary || null
-                    }
+                    data: { status: currentStatus }
                 });
             }
 
@@ -243,22 +240,37 @@ class ConversationController {
             // Update conversation
             const updateData = {
                 status,
-                summary: summary || null,
                 end_time: status === 'completed' ? formatDateForMySQL(new Date()) : null
             };
 
-            const updateQuery = `
-                UPDATE Conversations 
-                SET status = ?,
-                    summary = ?,
-                    end_time = ?
-                WHERE conversation_ID = ?
-            `;
-
             await connection.execute(
-                updateQuery,
-                [updateData.status, updateData.summary, updateData.end_time, conversationId]
+                'UPDATE Conversations SET status = ?, end_time = ? WHERE conversation_ID = ?',
+                [updateData.status, updateData.end_time, conversationId]
             );
+
+            // If transitioning to completed or liminal, generate a new summary
+            if (status === 'completed' || status === 'liminal') {
+                const summaryResult = await summaryService.generateSummary(conversationId);
+                if (summaryResult.success) {
+                    const parsedSummary = parseSummary(summaryResult.summary);
+                    if (parsedSummary.success) {
+                        await connection.execute(
+                            `INSERT INTO Conversation_Summaries 
+                            (conversation_ID, emotions, main_concerns, progress_notes, 
+                            recommendations, raw_summary)
+                            VALUES (?, ?, ?, ?, ?, ?)`,
+                            [
+                                conversationId,
+                                JSON.stringify(parsedSummary.parsed.emotions),
+                                JSON.stringify(parsedSummary.parsed.main_concerns),
+                                JSON.stringify(parsedSummary.parsed.progress_notes),
+                                JSON.stringify(parsedSummary.parsed.recommendations),
+                                parsedSummary.raw
+                            ]
+                        );
+                    }
+                }
+            }
 
             await connection.commit();
 
@@ -270,9 +282,6 @@ class ConversationController {
 
         } catch (error) {
             await connection.rollback();
-            if (process.env.NODE_ENV !== 'test') {
-                console.error('Error in updateConversationStatus:', error);
-            }
             next(error);
         } finally {
             connection.release();
@@ -313,89 +322,82 @@ class ConversationController {
 
 
     generateSummary = async (req, res, next) => {
-        const connection = await db.getConnection();
         try {
-            await connection.beginTransaction();
-
             const { conversationId } = req.params;
 
-            // Fetch messages
-            const [messages] = await connection.execute(
-                `SELECT 
-                    content,
-                    sender_type,
-                    emotional_state,
-                    timestamp
-                FROM Messages 
-                WHERE conversation_ID = ?
-                ORDER BY timestamp ASC`,
-                [conversationId]
-            );
+            // Generate AI summary using the updated service
+            const summaryResult = await summaryService.generateSummary(conversationId);
 
-            if (messages.length === 0) {
-                await connection.rollback();
-                return res.json({
-                    success: true,
-                    data: {
-                        summary: "No messages in conversation."
-                    }
-                });
+            if (!summaryResult.success) {
+                throw new Error(summaryResult.error || 'Failed to generate summary');
             }
 
-            // Generate AI summary
-            const aiSummaryResult = await summaryService.generateSummary(messages);
-
-            if (!aiSummaryResult.success) {
-                throw new Error('Failed to generate AI summary');
-            }
-
-            // Parse the summary into structured format
-            const parsedResult = parseSummary(aiSummaryResult.summary);
+            // Parse the summary
+            const parsedResult = parseSummary(summaryResult.summary);
 
             if (!parsedResult.success) {
                 throw new Error('Failed to parse summary structure');
             }
 
-            // Save structured summary
-            const [dbInsertResult] = await connection.execute(
-                `INSERT INTO Conversation_Summaries 
-                (conversation_ID, emotions, main_concerns, progress_notes, 
-                recommendations, raw_summary)
-                VALUES (?, ?, ?, ?, ?, ?)`,
-                [
-                    conversationId,
-                    JSON.stringify(parsedResult.parsed.emotions),
-                    JSON.stringify(parsedResult.parsed.main_concerns),
-                    JSON.stringify(parsedResult.parsed.progress_notes),
-                    JSON.stringify(parsedResult.parsed.recommendations),
-                    parsedResult.raw
-                ]
-            );
+            const connection = await db.getConnection();
+            try {
+                await connection.beginTransaction();
 
-            // Update conversation with summary reference
-            await connection.execute(
-                'UPDATE Conversations SET summary_ID = ? WHERE conversation_ID = ?',
-                [dbInsertResult.insertId, conversationId]
-            );
+                // Save new summary
+                await connection.execute(
+                    `INSERT INTO Conversation_Summaries 
+                    (conversation_ID, emotions, main_concerns, progress_notes, 
+                    recommendations, raw_summary)
+                    VALUES (?, ?, ?, ?, ?, ?)`,
+                    [
+                        conversationId,
+                        JSON.stringify(parsedResult.parsed.emotions),
+                        JSON.stringify(parsedResult.parsed.main_concerns),
+                        JSON.stringify(parsedResult.parsed.progress_notes),
+                        JSON.stringify(parsedResult.parsed.recommendations),
+                        parsedResult.raw
+                    ]
+                );
 
-            await connection.commit();
+                await connection.commit();
+
+                res.json({
+                    success: true,
+                    data: {
+                        summary: parsedResult.raw,
+                        structured: parsedResult.parsed
+                    }
+                });
+            } catch (error) {
+                await connection.rollback();
+                throw error;
+            } finally {
+                connection.release();
+            }
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    getLatestSummary = async (req, res, next) => {
+        try {
+            const { conversationId } = req.params;
+
+            const [summaries] = await db.execute(
+                `SELECT * FROM Conversation_Summaries 
+                WHERE conversation_ID = ?
+                ORDER BY created_at DESC
+                LIMIT 1`,
+                [conversationId]
+            );
 
             res.json({
                 success: true,
-                data: {
-                    summary: parsedResult.raw,
-                    structured: parsedResult.parsed
-                }
+                data: summaries[0] || null
             });
 
         } catch (error) {
-            await connection.rollback();
-            if (process.env.NODE_ENV !== 'test') {
-                console.error('Error generating structured summary:', error);
-            }
             next(error);
-        } finally {
-            connection.release();
         }
     }
 }

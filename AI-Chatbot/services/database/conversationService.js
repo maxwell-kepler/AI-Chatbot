@@ -60,17 +60,8 @@ const conversationService = {
         };
     },
 
-    updateConversationStatus: async (conversationId, newStatus, summary = null) => {
+    updateConversationStatus: async (conversationId, newStatus) => {
         try {
-            const body = {
-                status: newStatus,
-                summary: summary
-            };
-
-            if (newStatus === 'completed') {
-                body.endTime = new Date().toISOString();
-            }
-
             const response = await fetch(
                 `${API_URL}/conversations/${conversationId}/status`,
                 {
@@ -78,7 +69,7 @@ const conversationService = {
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(body)
+                    body: JSON.stringify({ status: newStatus })
                 }
             );
 
@@ -92,9 +83,32 @@ const conversationService = {
                 success: true,
                 data: data.data
             };
-
         } catch (error) {
             console.error('Error updating conversation status:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    },
+    getLatestSummary: async (conversationId) => {
+        try {
+            const response = await fetch(
+                `${API_URL}/conversations/${conversationId}/summary/latest`
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to fetch summary');
+            }
+
+            const data = await response.json();
+            return {
+                success: true,
+                summary: data.data
+            };
+        } catch (error) {
+            console.error('Error fetching latest summary:', error);
             return {
                 success: false,
                 error: error.message
