@@ -12,6 +12,7 @@ import authService from '../../services/auth/authService';
 const SettingsScreen = () => {
     const [resetPasswordVisible, setResetPasswordVisible] = useState(false);
     const [deleteAccountVisible, setDeleteAccountVisible] = useState(false);
+    const [loggingOut, setLoggingOut] = useState(false);
 
     const handleLogout = async () => {
         Alert.alert(
@@ -27,8 +28,10 @@ const SettingsScreen = () => {
                     style: "destructive",
                     onPress: async () => {
                         try {
+                            setLoggingOut(true);
                             await authService.signOut();
                         } catch (error) {
+                            setLoggingOut(false);
                             Alert.alert('Error', 'Failed to logout. Please try again.');
                         }
                     }
@@ -39,9 +42,21 @@ const SettingsScreen = () => {
 
     return (
         <View style={styles.container}>
+            {loggingOut && (
+                <View style={styles.loadingOverlay}>
+                    <View style={styles.loadingContent}>
+                        <Text style={styles.loadingText}>Logging out...</Text>
+                        <Text style={styles.loadingSubText}>
+                            Generating conversation summaries.
+                            Please wait a moment.
+                        </Text>
+                    </View>
+                </View>
+            )}
+
             <View style={styles.section}>
                 <View style={styles.sectionHeader}>
-                    <Text preset="header3" style={styles.sectionTitle}>Account Settings</Text>
+                    <Text style={styles.sectionTitle}>Account Settings</Text>
                 </View>
                 <Button
                     title="Reset Password"
@@ -49,14 +64,16 @@ const SettingsScreen = () => {
                     leftIcon={<Lock size={20} color={theme.colors.primary.main} />}
                     onPress={() => setResetPasswordVisible(true)}
                     style={styles.button}
+                    disabled={loggingOut}
                 />
 
                 <Button
-                    title="Logout"
+                    title={loggingOut ? "Logging out..." : "Logout"}
                     variant={BUTTON_VARIANTS.OUTLINE}
                     leftIcon={<LogOut size={20} color={theme.colors.primary.main} />}
                     onPress={handleLogout}
                     style={styles.button}
+                    disabled={loggingOut}
                 />
             </View>
 
@@ -70,16 +87,17 @@ const SettingsScreen = () => {
                     leftIcon={<Trash2 size={20} color={theme.colors.neutral.white} />}
                     onPress={() => setDeleteAccountVisible(true)}
                     style={styles.button}
+                    disabled={loggingOut}
                 />
             </View>
 
             <ResetPasswordModal
-                visible={resetPasswordVisible}
+                visible={resetPasswordVisible && !loggingOut}
                 onClose={() => setResetPasswordVisible(false)}
             />
 
             <DeleteAccountModal
-                visible={deleteAccountVisible}
+                visible={deleteAccountVisible && !loggingOut}
                 onClose={() => setDeleteAccountVisible(false)}
             />
         </View>
