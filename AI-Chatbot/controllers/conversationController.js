@@ -87,7 +87,9 @@ class ConversationController {
 
         } catch (error) {
             await connection.rollback();
-            console.error('Error in createConversation:', error);
+            if (process.env.NODE_ENV !== 'test') {
+                console.error('Error in createConversation:', error);
+            }
             next(error);
         } finally {
             connection.release();
@@ -163,13 +165,17 @@ class ConversationController {
                 res.status(201).json(response);
 
             } catch (dbError) {
-                console.error('Database error while adding message:', dbError);
+                if (process.env.NODE_ENV !== 'test') {
+                    console.error('Database error while adding message:', dbError);
+                }
                 throw new Error(`Failed to add message: ${dbError.message}`);
             }
 
         } catch (error) {
             await connection.rollback();
-            console.error('Error processing addMessage:', error);
+            if (process.env.NODE_ENV !== 'test') {
+                console.error('Error processing addMessage:', error);
+            }
             next(error);
         } finally {
             connection.release();
@@ -264,7 +270,9 @@ class ConversationController {
 
         } catch (error) {
             await connection.rollback();
-            console.error('Error in updateConversationStatus:', error);
+            if (process.env.NODE_ENV !== 'test') {
+                console.error('Error in updateConversationStatus:', error);
+            }
             next(error);
         } finally {
             connection.release();
@@ -296,7 +304,9 @@ class ConversationController {
             });
 
         } catch (error) {
-            console.error('Error fetching conversation messages:', error);
+            if (process.env.NODE_ENV !== 'test') {
+                console.error('Error fetching conversation messages:', error);
+            }
             next(error);
         }
     }
@@ -380,7 +390,9 @@ class ConversationController {
 
         } catch (error) {
             await connection.rollback();
-            console.error('Error generating structured summary:', error);
+            if (process.env.NODE_ENV !== 'test') {
+                console.error('Error generating structured summary:', error);
+            }
             next(error);
         } finally {
             connection.release();
