@@ -1,13 +1,13 @@
-// screens/settings/SettingsScreen/index.js
+// screens/SettingsScreen/index.js
 import React, { useState } from 'react';
 import { View, Alert, Text } from 'react-native';
 import { LogOut, Bell, Trash2, Lock } from 'lucide-react-native';
-import { theme } from '../../../styles/theme';
-import Button, { BUTTON_VARIANTS } from '../../../components/common/Button';
-import ResetPasswordModal from '../../../components/specific/Settings/ResetPasswordModal';
-import DeleteAccountModal from '../../../components/specific/Settings/DeleteAccountModal';
+import { theme } from '../../styles/theme';
+import Button, { BUTTON_VARIANTS } from '../../components/common/Button';
+import ResetPasswordModal from '../../components/specific/Settings/ResetPasswordModal';
+import DeleteAccountModal from '../../components/specific/Settings/DeleteAccountModal';
 import styles from './styles';
-import authService from '../../../services/auth/authService';
+import authService from '../../services/auth/authService';
 
 const SettingsScreen = () => {
     const [resetPasswordVisible, setResetPasswordVisible] = useState(false);

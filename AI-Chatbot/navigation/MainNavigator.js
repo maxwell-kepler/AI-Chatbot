@@ -10,11 +10,11 @@ import {
     PocketKnife,
 } from 'lucide-react-native';
 import { theme } from '../styles/theme';
-import ChatScreen from '../screens/chat/ChatScreen';
-import ResourcesScreen from '../screens/resources/ResourcesScreen';
-import SettingsScreen from '../screens/settings/SettingsScreen';
-import TrackingScreen from '../screens/tracking/TrackingScreen';
-import BreathingScreen from '../screens/tools/BreathingScreen';
+import ChatScreen from '../screens/ChatScreen';
+import ResourcesScreen from '../screens/ResourcesScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+import TrackingScreen from '../screens/TrackingScreen';
+import BreathingScreen from '../screens/BreathingScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -62,18 +62,18 @@ const TrackingStack = () => (
 );
 
 const ToolsStack = () => (
-    <Stack.Navigator 
-    screenOptions={{
-        headerStyle: {
-            backgroundColor: theme.colors.neutral.white,
-        },
-        headerTintColor: theme.colors.primary.main,
-        headerTitleStyle: {
-            ...theme.typography.presets.header3,
-        },
-        headerShadowVisible: false,
-    }}>
-         <Stack.Screen
+    <Stack.Navigator
+        screenOptions={{
+            headerStyle: {
+                backgroundColor: theme.colors.neutral.white,
+            },
+            headerTintColor: theme.colors.primary.main,
+            headerTitleStyle: {
+                ...theme.typography.presets.header3,
+            },
+            headerShadowVisible: false,
+        }}>
+        <Stack.Screen
             name="ToolsMain"
             component={BreathingScreen}
             options={{ title: 'Tools' }}

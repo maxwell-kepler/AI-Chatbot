@@ -1,4 +1,4 @@
-// screens/auth/Login/index.js
+// screens/Login/index.js
 import React, { useState } from 'react';
 import {
     View,
@@ -7,12 +7,12 @@ import {
     Platform,
     Alert
 } from 'react-native';
-import Button, { BUTTON_VARIANTS, BUTTON_SIZES } from '../../../components/common/Button';
-import Input from '../../../components/common/Input';
-import authService from '../../../services/auth/authService';
+import Button, { BUTTON_VARIANTS, BUTTON_SIZES } from '../../components/common/Button';
+import Input from '../../components/common/Input';
+import authService from '../../services/auth/authService';
 import styles from './styles';
 import { Mail, Lock } from 'lucide-react-native';
-import { theme } from '../../../styles/theme';
+import { theme } from '../../styles/theme';
 
 const getErrorMessage = (errorCode) => {
     switch (errorCode) {

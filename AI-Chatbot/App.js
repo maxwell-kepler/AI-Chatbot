@@ -2,7 +2,7 @@
 import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuth } from './hooks/useAuth';
-import LoadingScreen from './screens/common/LoadingScreen';
+import LoadingScreen from './screens/LoadingScreen';
 import AppNavigator from './navigation/AppNavigator';
 
 export default function App() {

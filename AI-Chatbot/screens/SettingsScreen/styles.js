@@ -1,6 +1,6 @@
-// screens/settings/SettingsScreen/styles.js
+// screens/SettingsScreen/styles.js
 import { StyleSheet } from 'react-native';
-import { theme } from '../../../styles/theme';
+import { theme } from '../../styles/theme';
 
 export default StyleSheet.create({
     container: {

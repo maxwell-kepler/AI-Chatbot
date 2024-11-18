@@ -1,4 +1,4 @@
-// screens/resources/ResourcesScreen/index.js
+// screens/ResourcesScreen/index.js
 import React, { useState, useCallback, useEffect } from 'react';
 import {
     View,
@@ -9,11 +9,11 @@ import {
     ActivityIndicator
 } from 'react-native';
 import { Search } from 'lucide-react-native';
-import ResourceCard from '../../../components/specific/Resources/ResourceCard';
-import CategoryPill from '../../../components/specific/Resources/CategoryPill';
-import { theme } from '../../../styles/theme';
+import ResourceCard from '../../components/specific/Resources/ResourceCard';
+import CategoryPill from '../../components/specific/Resources/CategoryPill';
+import { theme } from '../../styles/theme';
 import styles from './styles';
-import { resourceService } from '../../../services/database/resourceService';
+import { resourceService } from '../../services/database/resourceService';
 
 const ResourcesScreen = () => {
     const [searchQuery, setSearchQuery] = useState('');
