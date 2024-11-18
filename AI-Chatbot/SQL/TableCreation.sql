@@ -88,7 +88,6 @@ CREATE TABLE Conversations (
     start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     end_time TIMESTAMP,
     risk_level ENUM('low', 'medium', 'high') DEFAULT 'low',
-    summary TEXT,
     status ENUM('active', 'liminal', 'completed') DEFAULT 'active',
     user_ID VARCHAR(128),
     last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -159,13 +158,11 @@ CREATE TABLE Conversation_Summaries (
     INDEX idx_conversation (conversation_ID)
 );
 
--- Create indexes for better query performance
 CREATE INDEX idx_resources_category ON Resources(category_ID);
 CREATE INDEX idx_messages_conversation ON Messages(conversation_ID);
 CREATE INDEX idx_crisis_user ON Crisis_Events(user_ID);
 CREATE INDEX idx_moods_user_time ON Moods(user_ID, timestamp);
 CREATE INDEX idx_emotional_patterns_user ON Emotional_Patterns(user_ID);
 CREATE INDEX idx_conversations_user ON Conversations(user_ID);
-
 
 SHOW TABLES;

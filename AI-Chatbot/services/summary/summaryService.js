@@ -7,19 +7,19 @@ const genAI = new GoogleGenerativeAI(configAPI.GEMINI_API_KEY);
 const SUMMARY_PROMPT = `Create a structured summary of this mental health support conversation using exactly the following format:
 
 Key Emotions:
-• List 3-5 primary emotions expressed during the conversation, in order of prominence
+- List 3-5 primary emotions expressed during the conversation, in order of prominence
 
 Main Concerns:
-• Extract 2-3 key issues or concerns discussed
-• Focus on the most significant topics only
+- Extract 2-3 key issues or concerns discussed
+- Focus on the most significant topics only
 
 Progress Made:
-• Identify any notable insights gained or positive developments
-• Note any shifts in perspective or understanding
+- Identify any notable insights gained or positive developments
+- Note any shifts in perspective or understanding
 
 Recommendations:
-• List specific actions or strategies suggested
-• Include any resources recommended
+- List specific actions or strategies suggested
+- Include any resources recommended
 
 Keep each section concise but informative. Use bullet points as shown above.
 Maintain a compassionate but professional tone.
@@ -53,10 +53,20 @@ const summaryService = {
                 .filter(msg => msg.content && msg.content.trim())
                 .map(msg => {
                     const role = msg.sender_type === 'user' ? 'User' : 'Assistant';
-                    const emotionalState = msg.emotional_state
-                        ? JSON.parse(msg.emotional_state)
-                        : null;
-                    const emotionInfo = emotionalState
+                    let emotionalState;
+
+                    if (msg.emotional_state) {
+                        try {
+                            emotionalState = typeof msg.emotional_state === 'string'
+                                ? JSON.parse(msg.emotional_state)
+                                : msg.emotional_state;
+                        } catch (e) {
+                            console.warn('Error parsing emotional state:', e);
+                            emotionalState = null;
+                        }
+                    }
+
+                    const emotionInfo = emotionalState?.state
                         ? ` [Emotional State: ${emotionalState.state.join(', ')}]`
                         : '';
                     return `${role}${emotionInfo}: ${msg.content}`;
