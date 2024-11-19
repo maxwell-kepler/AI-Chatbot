@@ -102,5 +102,31 @@ export const trackingService = {
                 data: [] // Provide empty array as fallback
             };
         }
+    },
+
+    getResourceAccessHistory: async (firebaseId) => {
+        try {
+            const response = await fetch(
+                `${API_URL}/tracking/firebase/${firebaseId}/resource-access`
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to fetch resource access history');
+            }
+
+            return {
+                success: true,
+                data: data.data
+            };
+        } catch (error) {
+            console.error('Error fetching resource access history:', error);
+            return {
+                success: false,
+                error: error.message,
+                data: []
+            };
+        }
     }
 };

@@ -328,6 +328,53 @@ class TrackingController {
             next(error);
         }
     };
+
+    getResourceAccessHistory = async (req, res, next) => {
+        try {
+            const { firebaseId } = req.params;
+
+            const [users] = await db.execute(
+                'SELECT user_ID FROM Users WHERE firebase_ID = ?',
+                [firebaseId]
+            );
+
+            if (users.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'User not found'
+                });
+            }
+
+            const userId = users[0].user_ID;
+
+            const query = `
+                SELECT 
+                    ab.access_time,
+                    ab.referral_source,
+                    r.name as resource_name,
+                    r.website_URL,
+                    c.name as category_name,
+                    c.icon as category_icon
+                FROM Accessed_By ab
+                JOIN Resources r ON ab.resource_ID = r.resource_ID
+                JOIN Categories c ON r.category_ID = c.category_ID
+                WHERE ab.user_ID = ?
+                ORDER BY ab.access_time DESC
+                LIMIT 50
+            `;
+
+            const [accessHistory] = await db.execute(query, [userId]);
+
+            res.json({
+                success: true,
+                data: accessHistory
+            });
+
+        } catch (error) {
+            console.error('Error fetching resource access history:', error);
+            next(error);
+        }
+    };
 }
 
 module.exports = new TrackingController();

@@ -12,12 +12,13 @@ import {
     AppState
 } from 'react-native';
 import { useAuth } from '../../hooks/useAuth';
-import { useFocusEffect, useIsFocused } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { theme } from '../../styles/theme';
 import ChatBubble from '../../components/specific/Chat/ChatBubble';
 import MessageInput from '../../components/specific/Chat/MessageInput';
 import { chatWithGemini } from '../../services/gemini/geminiService';
 import { conversationService } from '../../services/database/conversationService';
+import { resourceMatchingService } from '../../services/matching/resourceMatchingService';
 import LoadingScreen from '../LoadingScreen';
 import styles from './styles';
 import { WELCOME_MESSAGE, CRISIS_RESOURCES } from '../../config/promptConfig';
@@ -33,7 +34,6 @@ const ChatScreen = () => {
     const [conversationId, setConversationId] = useState(null);
     const [currentStatus, setCurrentStatus] = useState(null);
     const scrollViewRef = useRef(null);
-    const isFocused = useIsFocused();
     const appStateRef = useRef(AppState.currentState);
     const backgroundTimerRef = useRef(null);
 
@@ -206,6 +206,42 @@ const ChatScreen = () => {
                 const response = await chatWithGemini(message);
                 const { text, isCrisis, emotionalState, insights } = response;
 
+                const shouldRecommendResources =
+                    emotionalState.state.some(state =>
+                        ['anxiety', 'depression', 'stress'].includes(state)) ||
+                    message.toLowerCase().includes('help') ||
+                    message.toLowerCase().includes('resource') ||
+                    message.toLowerCase().includes('support');
+
+                if (shouldRecommendResources) {
+                    const matchedResources = await resourceMatchingService.getMatchingResources({
+                        severity_level: 'moderate',
+                        emotional_state: emotionalState.state
+                    });
+
+                    if (matchedResources.success && matchedResources.data.length > 0) {
+                        const resourceMessage = formatResourceRecommendations(matchedResources.data);
+                        setMessages(prev => [...prev, {
+                            text: "Based on what you're sharing, these resources might be helpful:",
+                            isUser: false,
+                            timestamp: new Date()
+                        }, {
+                            text: resourceMessage,
+                            isUser: false,
+                            timestamp: new Date(),
+                            isResourceRecommendation: true
+                        }]);
+
+                        matchedResources.data.forEach(resource => {
+                            resourceMatchingService.recordResourceAccess(
+                                user.uid,
+                                resource.resource_ID,
+                                'chat'
+                            );
+                        });
+                    }
+                }
+
                 await conversationService.addMessage(
                     currentConversationId,
                     text,
@@ -249,34 +285,72 @@ const ChatScreen = () => {
 
 
     const handleCrisisSituation = async (message, emotionalState, currentConversationId) => {
-        if (!currentConversationId) {
-            console.warn('No active conversation for crisis handling');
-            return;
-        }
-
         try {
-            console.log('Recording crisis event for conversation:', currentConversationId);
-            await conversationService.recordCrisisEvent(
-                currentConversationId,
-                user.uid,
-                'severe',
-                `Crisis detected in user message: ${message}\nEmotional State: ${emotionalState.state.join(', ')}`
-            );
+            const matchedResources = await resourceMatchingService.getMatchingResources({
+                severity_level: 'severe',
+                emotional_state: emotionalState.state,
+                has_substance_issues: message.toLowerCase().includes('substance') ||
+                    message.toLowerCase().includes('drug') ||
+                    message.toLowerCase().includes('alcohol'),
+                needs_housing: message.toLowerCase().includes('homeless') ||
+                    message.toLowerCase().includes('housing')
+            });
 
-            await conversationService.updateRiskLevel(currentConversationId, 'high');
+            if (!matchedResources.success || matchedResources.data.length === 0) {
+                const crisisText = CRISIS_RESOURCES.replace(
+                    /(\d{3}-\d{3}-\d{4})/g,
+                    match => `[${match}](tel:${match.replace(/-/g, '')})`
+                );
 
-            setMessages(prev => [...prev, {
-                text: CRISIS_RESOURCES,
-                isUser: false,
-                timestamp: new Date(),
-                isCrisisAlert: true
-            }]);
+                setMessages(prev => [...prev, {
+                    text: crisisText,
+                    isUser: false,
+                    timestamp: new Date(),
+                    isCrisisAlert: true
+                }]);
+            } else {
+                setMessages(prev => [...prev, {
+                    text: "Based on what you're sharing, these resources might be helpful:",
+                    isUser: false,
+                    timestamp: new Date()
+                }, {
+                    text: formatResourceRecommendations(matchedResources.data),
+                    isUser: false,
+                    timestamp: new Date(),
+                    isResourceRecommendation: true
+                }]);
+            }
+
+            matchedResources.data.forEach(resource => {
+                resourceMatchingService.recordResourceAccess(user.uid, resource.resource_ID, 'crisis');
+            });
+
         } catch (error) {
-            console.error('Error handling crisis situation:', error);
+            console.error('Error in crisis handling:', error);
         }
     };
 
-
+    const formatResourceRecommendations = (resources) => {
+        let message = "";
+        resources.forEach(resource => {
+            message += `${resource.name.toUpperCase()}\n`;
+            message += `${resource.description}\n\n`;
+            if (resource.phone) {
+                message += `Call: [${resource.phone}](tel:${resource.phone})\n`;
+            }
+            if (resource.hours) {
+                message += `Hours: ${resource.hours}\n`;
+            }
+            if (resource.address && resource.address !== 'Calgary, AB') {
+                message += `[Open Map](https://maps.google.com/?q=${encodeURIComponent(resource.address)})\n`;
+            }
+            if (resource.website_URL) {
+                message += `[Visit Website](${resource.website_URL})\n`;
+            }
+            message += '\n';
+        });
+        return message;
+    };
 
     const updateRiskLevel = async (emotionalState, insights, currentConversationId) => {
         if (!currentConversationId) {

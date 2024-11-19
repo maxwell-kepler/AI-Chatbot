@@ -107,6 +107,64 @@ class ResourceController {
             next(error);
         }
     }
+
+    matchResources = async (req, res, next) => {
+        try {
+            const { tags } = req.body;
+            const placeholders = tags.map(() => '?').join(',');
+            const query = `
+                SELECT DISTINCT r.*, c.name as category_name, c.icon as category_icon
+                FROM Resources r
+                JOIN Categories c ON r.category_ID = c.category_ID
+                JOIN Used_In ui ON r.resource_ID = ui.resource_ID
+                JOIN Tags t ON ui.tag_ID = t.tag_ID
+                WHERE t.name IN (${placeholders})
+                GROUP BY r.resource_ID
+                HAVING COUNT(DISTINCT t.tag_ID) = ?
+            `;
+
+            const [resources] = await db.execute(query, [...tags, tags.length]);
+            console.log('Found resources:', resources);
+
+            res.json({
+                success: true,
+                data: resources
+            });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    recordAccess = async (req, res, next) => {
+        const connection = await db.getConnection();
+        try {
+            const { userId: firebaseId, resourceId, referralSource } = req.body;
+
+            const [users] = await connection.execute(
+                'SELECT user_ID FROM Users WHERE firebase_ID = ?',
+                [firebaseId]
+            );
+
+            if (users.length === 0) {
+                throw new Error('User not found');
+            }
+
+            await connection.execute(
+                'INSERT INTO Accessed_By (user_ID, resource_ID, referral_source) VALUES (?, ?, ?)',
+                [users[0].user_ID, resourceId, referralSource]
+            );
+
+            res.json({
+                success: true,
+                message: 'Resource access recorded successfully'
+            });
+
+        } catch (error) {
+            next(error);
+        } finally {
+            connection.release();
+        }
+    }
 }
 
 module.exports = new ResourceController();

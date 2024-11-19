@@ -12,5 +12,7 @@ console.log('Resource controller methods:', {
 router.get('/', resourceController.getAllResources);
 router.get('/search', resourceController.searchResources);
 router.get('/category/:categoryId', resourceController.getResourcesByCategory);
+router.post('/match', resourceController.matchResources);
+router.post('/access', resourceController.recordAccess);
 
 module.exports = router;

@@ -76,7 +76,7 @@ CREATE TABLE Accessed_By (
     user_ID VARCHAR(128),
     resource_ID INT,
     access_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    referral_source ENUM('chat', 'search', 'category_browse'),
+    referral_source ENUM('chat', 'search', 'category_browse', 'crisis'),
     PRIMARY KEY (user_ID, resource_ID, access_time),
     FOREIGN KEY (user_ID) REFERENCES Users(user_ID),
     FOREIGN KEY (resource_ID) REFERENCES Resources(resource_ID)

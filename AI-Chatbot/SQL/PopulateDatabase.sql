@@ -37,7 +37,7 @@ INSERT INTO Tags (name) VALUES
     ('Referrals'), ('Assessment'), ('Education'), ('Recovery'), ('Residential'),
     ('Walk-in'), ('Family'), ('No Appointment'), ('Women'), ('Immigrant Services'),
     ('Counselling'), ('Addiction'), ('Shelter'), ('Outreach'), ('Treatment'),
-    ('Therapy');
+    ('Therapy'), ('Crisis Intervention'), ('24/7 Support');
 
 INSERT INTO Resources (resource_ID, name, description, category_ID, phone, address, hours, website_URL) VALUES
 (1, 'Distress Centre Calgary', '24/7 crisis support, professional counselling and referrals.', 
@@ -84,7 +84,7 @@ INSERT INTO Used_In (resource_ID, tag_ID)
 SELECT 2, tag_ID FROM Tags WHERE name IN ('Sliding Scale', 'Professional', 'Multiple Languages');
 
 INSERT INTO Used_In (resource_ID, tag_ID)
-SELECT 3, tag_ID FROM Tags WHERE name IN ('Youth', 'Crisis Support', 'Family Services');
+SELECT 3, tag_ID FROM Tags WHERE name IN ('Youth', 'Crisis Support', 'Family Services', 'Crisis Intervention', '24/7 Support');
 
 INSERT INTO Used_In (resource_ID, tag_ID)
 SELECT 4, tag_ID FROM Tags WHERE name IN ('Free', 'Referrals', 'Assessment');

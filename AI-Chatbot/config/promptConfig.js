@@ -31,15 +31,13 @@ export const MOOD_PATTERNS = {
 
 export const CRISIS_RESOURCES = `IMPORTANT: If you're having thoughts of self-harm or suicide, please reach out for immediate help:
 
-🆘 Distress Centre Calgary (24/7): 403-266-4357
-🌟 Alberta Mental Health Help Line (24/7): 1-877-303-2642
-💭 Crisis Text Line: Text CONNECT to 741741
-🏥 Emergency Services: 911
+Distress Centre Calgary: 403-266-4357
+Emergency Services: [911](tel:911)
 
 Local Support Services in Calgary:
-• Access Mental Health (Referrals): 403-943-1500
-• Calgary Counselling Centre: 403-691-5991
-• Woods Homes (Youth): 403-299-9699
+- Access Mental Health (Referrals): 403-943-1500
+- Calgary Counselling Centre: 403-691-5991
+- Woods Homes (Youth): 403-299-9699
 
 There are people here in Calgary who want to help. You're not alone.`;
 

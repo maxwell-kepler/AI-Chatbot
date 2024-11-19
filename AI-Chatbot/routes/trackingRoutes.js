@@ -13,5 +13,6 @@ router.get('/firebase/:firebaseId/emotional-history', trackingController.getEmot
 router.get('/firebase/:firebaseId/conversation-summaries', trackingController.getConversationSummaries);
 router.get('/firebase/:firebaseId/emotional-patterns', trackingController.getEmotionalPatterns);
 router.get('/firebase/:firebaseId/crisis-events', trackingController.getCrisisEvents);
+router.get('/firebase/:firebaseId/resource-access', trackingController.getResourceAccessHistory);
 
 module.exports = router;
