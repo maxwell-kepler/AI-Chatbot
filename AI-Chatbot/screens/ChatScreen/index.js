@@ -206,19 +206,18 @@ const ChatScreen = () => {
                 const response = await chatWithGemini(message);
                 const { text, isCrisis, emotionalState, insights } = response;
 
-                const shouldRecommendResources =
-                    emotionalState.state.some(state =>
-                        ['anxiety', 'depression', 'stress'].includes(state)) ||
+                const shouldRecommendResources = emotionalState.state.some(state =>
+                    ['anxiety', 'depression', 'stress'].includes(state)) ||
                     message.toLowerCase().includes('help') ||
                     message.toLowerCase().includes('resource') ||
                     message.toLowerCase().includes('support');
 
                 if (shouldRecommendResources) {
-                    const matchedResources = await resourceMatchingService.getMatchingResources({
-                        severity_level: 'moderate',
-                        emotional_state: emotionalState.state
-                    });
-
+                    const matchedResources = await resourceMatchingService.getMatchingResources(
+                        'moderate',
+                        emotionalState,
+                        message
+                    );
                     if (matchedResources.success && matchedResources.data.length > 0) {
                         const resourceMessage = formatResourceRecommendations(matchedResources.data);
                         setMessages(prev => [...prev, {
@@ -286,15 +285,11 @@ const ChatScreen = () => {
 
     const handleCrisisSituation = async (message, emotionalState, currentConversationId) => {
         try {
-            const matchedResources = await resourceMatchingService.getMatchingResources({
-                severity_level: 'severe',
-                emotional_state: emotionalState.state,
-                has_substance_issues: message.toLowerCase().includes('substance') ||
-                    message.toLowerCase().includes('drug') ||
-                    message.toLowerCase().includes('alcohol'),
-                needs_housing: message.toLowerCase().includes('homeless') ||
-                    message.toLowerCase().includes('housing')
-            });
+            const matchedResources = await resourceMatchingService.getMatchingResources(
+                'severe',
+                emotionalState,
+                message
+            );
 
             if (!matchedResources.success || matchedResources.data.length === 0) {
                 const crisisText = CRISIS_RESOURCES.replace(
@@ -321,14 +316,20 @@ const ChatScreen = () => {
                 }]);
             }
 
+            // Record resource access
             matchedResources.data.forEach(resource => {
-                resourceMatchingService.recordResourceAccess(user.uid, resource.resource_ID, 'crisis');
+                resourceMatchingService.recordResourceAccess(
+                    user.uid,
+                    resource.resource_ID,
+                    'crisis'
+                );
             });
 
         } catch (error) {
             console.error('Error in crisis handling:', error);
         }
     };
+
 
     const formatResourceRecommendations = (resources) => {
         let message = "";

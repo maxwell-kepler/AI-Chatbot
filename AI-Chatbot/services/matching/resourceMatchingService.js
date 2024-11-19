@@ -1,55 +1,121 @@
 // services/matching/resourceMatchingService.js
 const { API_URL } = require("../../config/api.server");
 
+const CRISIS_INDICATORS = {
+    SUBSTANCE: ['substance', 'drug', 'alcohol', 'addiction'],
+    HOUSING: ['homeless', 'housing', 'shelter'],
+    SUICIDE: ['suicide', 'kill', 'die', 'end my life'],
+    VIOLENCE: ['abuse', 'violence', 'assault', 'hurt'],
+    EMERGENCY: ['emergency', 'crisis', 'urgent', 'immediate']
+};
+
+const determineSpecificNeeds = (message = '') => {
+    const needs = [];
+    const lowerMessage = message.toLowerCase();
+
+    if (CRISIS_INDICATORS.SUBSTANCE.some(term => lowerMessage.includes(term))) {
+        needs.push('substance');
+    }
+    if (CRISIS_INDICATORS.HOUSING.some(term => lowerMessage.includes(term))) {
+        needs.push('housing');
+    }
+    if (CRISIS_INDICATORS.SUICIDE.some(term => lowerMessage.includes(term))) {
+        needs.push('suicide');
+    }
+    if (CRISIS_INDICATORS.VIOLENCE.some(term => lowerMessage.includes(term))) {
+        needs.push('violence');
+    }
+    if (CRISIS_INDICATORS.EMERGENCY.some(term => lowerMessage.includes(term))) {
+        needs.push('emergency');
+    }
+
+    return needs;
+};
+
 const matchCrisisToResources = (crisisData) => {
-    console.log('=== RESOURCE MATCHING DEBUG ===');
-    console.log('Input crisis data:', crisisData);
+    const {
+        severity_level = 'moderate',
+        emotional_state = [],
+        specific_needs = []
+    } = crisisData;
 
-    const { severity_level, emotional_state, user_age, has_substance_issues, needs_housing } = crisisData;
-
-    const priorities = {
-        severe: ['Crisis Support', 'Confidential', 'Professional'],
-        moderate: ['Counselling', 'Support Groups', 'Professional'],
-        low: ['Support Groups', 'Education', 'Free']
+    const priorityMap = {
+        severe: ['Crisis Support', 'Crisis Intervention', 'Emergency Services', 'Immediate Help'],
+        moderate: ['Crisis Support', 'Professional', 'Counselling'],
+        low: ['Support Groups', 'Counselling', 'Professional']
     };
 
-    const additionalTags = [];
+    let relevantTags = new Set(priorityMap[severity_level] || priorityMap.moderate);
 
-    if (user_age && user_age < 25) {
-        additionalTags.push('Youth');
-    }
+    emotional_state.forEach(emotion => {
+        switch (emotion.toLowerCase()) {
+            case 'crisis':
+                relevantTags.add('Crisis Intervention');
+                relevantTags.add('Emergency Services');
+                break;
+            case 'anxiety':
+            case 'anxious':
+                relevantTags.add('Professional');
+                relevantTags.add('Counselling');
+                break;
+            case 'depression':
+            case 'depressed':
+                relevantTags.add('Professional');
+                relevantTags.add('Crisis Support');
+                break;
+            case 'suicidal':
+                relevantTags.add('Crisis Intervention');
+                relevantTags.add('24/7 Support');
+                break;
+        }
+    });
 
-    if (has_substance_issues) {
-        additionalTags.push('Addiction');
-    }
+    specific_needs.forEach(need => {
+        switch (need) {
+            case 'substance':
+                relevantTags.add('Addiction');
+                relevantTags.add('Treatment');
+                break;
+            case 'housing':
+                relevantTags.add('Emergency Housing');
+                relevantTags.add('Shelter');
+                break;
+            case 'suicide':
+                relevantTags.add('Crisis Intervention');
+                relevantTags.add('Safety Planning');
+                break;
+            case 'violence':
+                relevantTags.add('Crisis Support');
+                relevantTags.add('Safety Planning');
+                break;
+            case 'emergency':
+                relevantTags.add('Crisis Support');
+                relevantTags.add('Immediate Help');
+                break;
+        }
+    });
 
-    if (needs_housing) {
-        additionalTags.push('Emergency Housing');
-    }
-
-    if (emotional_state?.includes('suicidal')) {
-        additionalTags.push('Crisis Intervention');
-        additionalTags.push('Safety Planning');
-    }
-
-    const severityTags = priorities[severity_level] || priorities.moderate;
-    console.log('Severity-based tags:', severityTags);
-    console.log('Additional tags:', additionalTags);
-
-    const relevantTags = [...new Set([...severityTags, ...additionalTags])];
-    console.log('Final combined tags:', relevantTags);
-
-    return relevantTags;
+    return Array.from(relevantTags);
 };
 
 export const resourceMatchingService = {
-    getMatchingResources: async (crisisData) => {
+    getMatchingResources: async (severity_level, emotional_state, message = '') => {
         try {
-            console.log('Getting matching resources for:', crisisData);
-            const relevantTags = matchCrisisToResources(crisisData);
+            console.log('Resource matching input:', { severity_level, emotional_state, message });
 
-            console.log('Making request to:', `${API_URL}/resources/match`);
-            console.log('With tags:', relevantTags);
+            const normalizedEmotionalState = Array.isArray(emotional_state)
+                ? emotional_state
+                : emotional_state?.state || [];
+
+            const crisisData = {
+                severity_level: severity_level || 'moderate',
+                emotional_state: normalizedEmotionalState,
+                specific_needs: determineSpecificNeeds(message)
+            };
+
+            console.log('Normalized crisis data:', crisisData);
+            const relevantTags = matchCrisisToResources(crisisData);
+            console.log('Matched tags:', relevantTags);
 
             const response = await fetch(`${API_URL}/resources/match`, {
                 method: 'POST',
@@ -59,22 +125,19 @@ export const resourceMatchingService = {
                 body: JSON.stringify({ tags: relevantTags })
             });
 
-            console.log('Response status:', response.status);
-            const data = await response.json();
-            console.log('Response data:', data);
-
             if (!response.ok) {
-                throw new Error(data.error || 'Failed to fetch matching resources');
+                throw new Error('Failed to fetch matching resources');
             }
 
+            const data = await response.json();
             return {
                 success: true,
                 data: data.data,
                 tags: relevantTags
             };
+
         } catch (error) {
             console.error('Error in getMatchingResources:', error);
-            console.error('Error details:', error.stack);
             return {
                 success: false,
                 error: error.message,

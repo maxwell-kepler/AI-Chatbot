@@ -197,7 +197,7 @@ const TrackingScreen = () => {
                 </View>
             ) : (
                 <View style={styles.card}>
-                    <Text style={styles.noDataText}>No conversation summaries available yet.</Text>
+                    <Text style={styles.noDataText}>No conversation summaries available yet. If you've had a conversation, please log out to save it.</Text>
                 </View>
             )}
 
