@@ -14,7 +14,6 @@ import ChatScreen from '../screens/ChatScreen';
 import ResourcesScreen from '../screens/ResourcesScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import TrackingScreen from '../screens/TrackingScreen';
-import BreathingScreen from '../screens/BreathingScreen';
 import { useTabBarVisibility } from '../context/TabBarVisibilityContext';
 
 const Tab = createBottomTabNavigator();
@@ -58,26 +57,6 @@ const TrackingStack = () => (
             name="TrackingMain"
             component={TrackingScreen}
             options={{ title: 'Mood Tracking' }}
-        />
-    </Stack.Navigator>
-);
-
-const ToolsStack = () => (
-    <Stack.Navigator
-        screenOptions={{
-            headerStyle: {
-                backgroundColor: theme.colors.neutral.white,
-            },
-            headerTintColor: theme.colors.primary.main,
-            headerTitleStyle: {
-                ...theme.typography.presets.header3,
-            },
-            headerShadowVisible: false,
-        }}>
-        <Stack.Screen
-            name="ToolsMain"
-            component={BreathingScreen}
-            options={{ title: 'Tools' }}
         />
     </Stack.Navigator>
 );
@@ -163,15 +142,6 @@ const MainNavigator = () => {
                 options={{
                     tabBarIcon: ({ color, size }) => (
                         <Activity size={size} color={color} />
-                    ),
-                }}
-            />
-            <Tab.Screen
-                name="Tools"
-                component={ToolsStack}
-                options={{
-                    tabBarIcon: ({ color, size }) => (
-                        <PocketKnife size={size} color={color} />
                     ),
                 }}
             />
