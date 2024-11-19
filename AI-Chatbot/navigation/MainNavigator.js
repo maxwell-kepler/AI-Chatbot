@@ -15,6 +15,7 @@ import ResourcesScreen from '../screens/ResourcesScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import TrackingScreen from '../screens/TrackingScreen';
 import BreathingScreen from '../screens/BreathingScreen';
+import { useTabBarVisibility } from '../context/TabBarVisibilityContext';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -126,6 +127,7 @@ const SettingsStack = () => (
 
 
 const MainNavigator = () => {
+    const { isTabBarVisible } = useTabBarVisibility();
     return (
         <Tab.Navigator
             screenOptions={{
@@ -135,6 +137,7 @@ const MainNavigator = () => {
                     height: 60,
                     paddingBottom: 8,
                     paddingTop: 8,
+                    display: isTabBarVisible ? 'flex' : 'none',
                 },
                 tabBarActiveTintColor: theme.colors.primary.main,
                 tabBarInactiveTintColor: theme.colors.neutral.grey600,

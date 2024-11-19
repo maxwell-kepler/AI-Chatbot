@@ -8,11 +8,13 @@ import ResetPasswordModal from '../../components/specific/Settings/ResetPassword
 import DeleteAccountModal from '../../components/specific/Settings/DeleteAccountModal';
 import styles from './styles';
 import authService from '../../services/auth/authService';
+import { useTabBarVisibility } from '../../context/TabBarVisibilityContext';
 
 const SettingsScreen = () => {
     const [resetPasswordVisible, setResetPasswordVisible] = useState(false);
     const [deleteAccountVisible, setDeleteAccountVisible] = useState(false);
     const [loggingOut, setLoggingOut] = useState(false);
+    const { setIsTabBarVisible } = useTabBarVisibility();
 
     const handleLogout = async () => {
         Alert.alert(
@@ -29,10 +31,13 @@ const SettingsScreen = () => {
                     onPress: async () => {
                         try {
                             setLoggingOut(true);
+                            setIsTabBarVisible(false);
                             await authService.signOut();
                         } catch (error) {
                             setLoggingOut(false);
                             Alert.alert('Error', 'Failed to logout. Please try again.');
+                        } finally {
+                            setIsTabBarVisible(true);
                         }
                     }
                 }
