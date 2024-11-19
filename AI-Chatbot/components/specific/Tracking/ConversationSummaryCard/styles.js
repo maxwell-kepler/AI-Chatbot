@@ -81,17 +81,5 @@ export default StyleSheet.create({
         ...theme.typography.presets.body2,
         color: theme.colors.neutral.grey700,
         flex: 1,
-    },
-    rawSummaryContainer: {
-        backgroundColor: theme.colors.neutral.grey50,
-        padding: theme.spacing.md,
-        borderRadius: theme.borderRadius.md,
-        borderLeftWidth: 3,
-        borderLeftColor: theme.colors.primary.main,
-    },
-    rawSummaryText: {
-        ...theme.typography.presets.body2,
-        color: theme.colors.neutral.grey800,
-        lineHeight: 20,
-    },
+    }
 });

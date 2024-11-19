@@ -21,6 +21,30 @@ const ConversationSummaryCard = ({ summary }) => {
         }
     };
 
+    const getEmotionColor = (emotion) => {
+        const emotionColors = {
+            anxiety: theme.colors.pastels.coral,
+            worry: theme.colors.pastels.coral,
+            depression: theme.colors.pastels.mauve,
+            sadness: theme.colors.pastels.mauve,
+            anger: theme.colors.pastels.rose,
+            frustration: theme.colors.pastels.rose,
+            neutral: theme.colors.pastels.mint,
+            calm: theme.colors.pastels.mint,
+            happy: theme.colors.pastels.banana,
+            joy: theme.colors.pastels.banana,
+            hopeful: theme.colors.pastels.honeydew,
+            optimistic: theme.colors.pastels.honeydew,
+            fear: theme.colors.pastels.periwinkle,
+            stressed: theme.colors.pastels.periwinkle,
+            contentment: theme.colors.pastels.mint,
+            upbeat: theme.colors.pastels.banana,
+            positivity: theme.colors.pastels.honeydew
+        };
+
+        return emotionColors[emotion.toLowerCase()] || theme.colors.pastels.mint;
+    };
+
     return (
         <View style={styles.container}>
             <TouchableOpacity
@@ -106,40 +130,10 @@ const ConversationSummaryCard = ({ summary }) => {
                             ))}
                         </View>
                     )}
-
-                    {summary.raw_summary && (
-                        <View style={styles.rawSummaryContainer}>
-                            <Text style={styles.rawSummaryText}>
-                                {summary.raw_summary}
-                            </Text>
-                        </View>
-                    )}
                 </View>
             )}
         </View>
     );
-};
-
-const getEmotionColor = (emotion) => {
-    const emotionColors = {
-        anxiety: theme.colors.pastels.coral,
-        worry: theme.colors.pastels.coral,
-        depression: theme.colors.pastels.mauve,
-        sadness: theme.colors.pastels.mauve,
-        anger: theme.colors.pastels.rose,
-        frustration: theme.colors.pastels.rose,
-        neutral: theme.colors.pastels.mint,
-        calm: theme.colors.pastels.mint,
-        happy: theme.colors.pastels.banana,
-        joy: theme.colors.pastels.banana,
-        hopeful: theme.colors.pastels.honeydew,
-        optimistic: theme.colors.pastels.honeydew,
-        fear: theme.colors.pastels.periwinkle,
-        stressed: theme.colors.pastels.periwinkle,
-        crisis: theme.colors.error.light,
-    };
-
-    return emotionColors[emotion] || theme.colors.pastels.mint;
 };
 
 export default ConversationSummaryCard;
