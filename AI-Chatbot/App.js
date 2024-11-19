@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuth } from './hooks/useAuth';
 import LoadingScreen from './screens/LoadingScreen';
 import AppNavigator from './navigation/AppNavigator';
+import TabBarVisibilityProvider from './context/TabBarVisibilityContext';
 
 export default function App() {
     const { user, loading } = useAuth();
@@ -14,7 +15,9 @@ export default function App() {
 
     return (
         <SafeAreaProvider>
-            <AppNavigator />
+            <TabBarVisibilityProvider>
+                <AppNavigator />
+            </TabBarVisibilityProvider>
         </SafeAreaProvider>
     );
 }

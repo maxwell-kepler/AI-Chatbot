@@ -1,90 +1,239 @@
 // screens/TrackingScreen/index.js
-import React from 'react';
-import { View, ScrollView, Text, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+    View,
+    ScrollView,
+    Text,
+    ActivityIndicator,
+    RefreshControl
+} from 'react-native';
+import { useAuth } from '../../hooks/useAuth';
 import { PieChart } from 'react-native-chart-kit';
 import { theme } from '../../styles/theme';
+import { trackingService } from '../../services/database/trackingService';
 import styles from './styles';
-
-// Get screen width and calculate chart width with padding
-const screenWidth = Dimensions.get('window').width;
-const chartWidth = screenWidth - (theme.spacing.layout.page * 2 + theme.spacing.lg * 2);
-
-// Mock data
-const emotionDistribution = [
-    { name: 'Happy', population: 35, color: theme.colors.pastels.banana, legendFontColor: '#7F7F7F' },
-    { name: 'Anxious', population: 20, color: theme.colors.pastels.coral, legendFontColor: '#7F7F7F' },
-    { name: 'Neutral', population: 25, color: theme.colors.pastels.honeydew, legendFontColor: '#7F7F7F' },
-    { name: 'Sad', population: 10, color: theme.colors.pastels.mint, legendFontColor: '#7F7F7F' },
-    { name: 'Stressed', population: 10, color: theme.colors.pastels.mauve, legendFontColor: '#7F7F7F' },
-];
-
-const recentMoods = [
-    { date: 'Today 2:30 PM', mood: 'Happy', note: 'Feeling productive and energetic' },
-    { date: 'Today 10:00 AM', mood: 'Anxious', note: 'Morning meeting stress' },
-    { date: 'Yesterday 8:00 PM', mood: 'Content', note: 'Relaxing evening' },
-    { date: 'Yesterday 3:00 PM', mood: 'Stressed', note: 'Work deadline approaching' },
-];
-
-const chartConfig = {
-    backgroundColor: theme.colors.neutral.white,
-    backgroundGradientFrom: theme.colors.neutral.white,
-    backgroundGradientTo: theme.colors.neutral.white,
-    decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`,
-    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-    propsForDots: {
-        r: "6",
-        strokeWidth: "2",
-        stroke: theme.colors.primary.main
-    },
-    propsForLabels: {
-        fontSize: 12,
-    },
-    style: {
-        borderRadius: 16,
-    },
-    propsForBackgroundLines: {
-        strokeWidth: 1,
-        stroke: theme.colors.neutral.grey200,
-    },
-};
+import ConversationSummaryCard from '../../components/specific/Tracking/ConversationSummaryCard';
+import CrisisEventCard from '../../components/specific/Tracking/CrisisEventCard';
 
 const TrackingScreen = () => {
+    const { user, loading: authLoading } = useAuth();
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [emotionalData, setEmotionalData] = useState([]);
+    const [summaries, setSummaries] = useState([]);
+    const [patterns, setPatterns] = useState([]);
+    const [error, setError] = useState(null);
+    const [crisisEvents, setCrisisEvents] = useState([]);
+    const [crisisError, setCrisisError] = useState(null);
+
+    const fetchData = async () => {
+        if (!user) {
+            setError('Please log in to view your tracking data');
+            setLoading(false);
+            return;
+        }
+
+        try {
+            setLoading(true);
+            setError(null);
+            setCrisisError(null);
+
+            const [
+                emotionalResult,
+                summariesResult,
+                patternsResult,
+                crisisResult
+            ] = await Promise.all([
+                trackingService.getEmotionalHistory(user.uid),
+                trackingService.getConversationSummaries(user.uid),
+                trackingService.getEmotionalPatterns(user.uid),
+                trackingService.getCrisisEvents(user.uid)
+            ]);
+
+            if (emotionalResult.success) {
+                setEmotionalData(emotionalResult.data);
+            }
+            if (summariesResult.success) {
+                setSummaries(summariesResult.data);
+            }
+            if (patternsResult.success) {
+                setPatterns(patternsResult.data);
+            }
+            if (crisisResult.success) {
+                setCrisisEvents(crisisResult.data || []);
+            } else {
+                setCrisisError(crisisResult.error);
+            }
+        } catch (error) {
+            console.error('Error fetching tracking data:', error);
+            setError('Failed to load tracking data. Please try again later.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!authLoading && user) {
+            fetchData();
+        }
+    }, [authLoading, user]);
+
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await fetchData();
+        setRefreshing(false);
+    };
+
+    if (authLoading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={theme.colors.primary.main} />
+            </View>
+        );
+    }
+
+    if (!user) {
+        return (
+            <View style={styles.container}>
+                <Text style={styles.errorText}>Please log in to view your tracking data.</Text>
+            </View>
+        );
+    }
+
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={theme.colors.primary.main} />
+            </View>
+        );
+    }
+
+    if (error) {
+        return (
+            <View style={styles.container}>
+                <Text style={styles.errorText}>{error}</Text>
+            </View>
+        );
+    }
+
+    const emotionDistribution = Object.entries(
+        emotionalData.reduce((acc, entry) => {
+            entry.emotionalState.state.forEach(emotion => {
+                acc[emotion] = (acc[emotion] || 0) + 1;
+            });
+            return acc;
+        }, {})
+    ).map(([emotion, count]) => {
+        const getEmotionColor = (emotion) => {
+            const emotionColors = {
+                anxiety: theme.colors.pastels.coral,
+                worry: theme.colors.pastels.coral,
+                depression: theme.colors.pastels.mauve,
+                sadness: theme.colors.pastels.mauve,
+                anger: theme.colors.pastels.rose,
+                frustration: theme.colors.pastels.rose,
+                neutral: theme.colors.pastels.mint,
+                calm: theme.colors.pastels.mint,
+                happy: theme.colors.pastels.banana,
+                joy: theme.colors.pastels.banana,
+                hopeful: theme.colors.pastels.honeydew,
+                optimistic: theme.colors.pastels.honeydew,
+                fear: theme.colors.pastels.periwinkle,
+                stressed: theme.colors.pastels.periwinkle,
+                crisis: theme.colors.error.light,
+            };
+            return emotionColors[emotion.toLowerCase()] || theme.colors.pastels.mint;
+        };
+
+        return {
+            name: emotion,
+            population: count,
+            color: getEmotionColor(emotion),
+            legendFontColor: theme.colors.neutral.grey700,
+            legendFontSize: 12,
+        };
+    });
+
     return (
-        <ScrollView style={styles.container}>
-            <View style={styles.content}>
-
-                {/* Recent Moods Card */}
+        <ScrollView
+            style={styles.container}
+            refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+            }
+        >
+            {emotionDistribution.length > 0 ? (
                 <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Recent Moods</Text>
-                    {recentMoods.map((entry, index) => (
-                        <View key={index} style={styles.moodEntry}>
-                            <Text style={styles.moodDate}>{entry.date}</Text>
-                            <Text style={styles.moodText}>{entry.mood}</Text>
-                            <Text style={styles.moodNote}>{entry.note}</Text>
-                        </View>
-                    ))}
-                </View>
-
-
-                {/* Emotion Distribution Card */}
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Emotion Distribution</Text>
+                    <Text style={styles.cardTitle}>Emotional Distribution</Text>
                     <View style={styles.chartWrapper}>
                         <PieChart
                             data={emotionDistribution}
-                            width={chartWidth}
+                            width={300}
                             height={220}
-                            chartConfig={chartConfig}
+                            chartConfig={{
+                                color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                            }}
                             accessor="population"
                             backgroundColor="transparent"
-                            paddingLeft="0"
-                            center={[0, 0]}
+                            paddingLeft="15"
                             absolute
-                            style={styles.chart}
                         />
                     </View>
                 </View>
+            ) : (
+                <View style={styles.card}>
+                    <Text style={styles.noDataText}>No emotional data available yet.</Text>
+                </View>
+            )}
+
+            {summaries.length > 0 ? (
+                <View style={styles.card}>
+                    <Text style={styles.cardTitle}>Recent Conversations</Text>
+                    {summaries.map((summary, index) => (
+                        <ConversationSummaryCard
+                            key={`summary-${index}`}
+                            summary={summary}
+                        />
+                    ))}
+                </View>
+            ) : (
+                <View style={styles.card}>
+                    <Text style={styles.noDataText}>No conversation summaries available yet. If you've had a conversation, please log out to save it.</Text>
+                </View>
+            )}
+
+            {patterns.length > 0 ? (
+                <View style={styles.card}>
+                    <Text style={styles.cardTitle}>Emotional Patterns</Text>
+                    {patterns.map((pattern, index) => (
+                        <View key={index} style={styles.patternItem}>
+                            <Text style={styles.patternType}>{pattern.pattern_type}</Text>
+                            <Text style={styles.patternValue}>{pattern.pattern_value}</Text>
+                            <Text style={styles.patternStats}>
+                                Occurred {pattern.occurrence_count} times
+                                (Confidence: {Math.round(pattern.confidence_score)}%)
+                            </Text>
+                        </View>
+                    ))}
+                </View>
+            ) : (
+                <View style={styles.card}>
+                    <Text style={styles.noDataText}>No emotional patterns detected yet.</Text>
+                </View>
+            )}
+            <View style={styles.card}>
+                <Text style={styles.cardTitle}>Crisis Events</Text>
+                {crisisError ? (
+                    <Text style={styles.errorText}>{crisisError}</Text>
+                ) : crisisEvents.length > 0 ? (
+                    crisisEvents.map((event) => (
+                        <CrisisEventCard
+                            key={event.event_ID}
+                            event={event}
+                        />
+                    ))
+                ) : (
+                    <Text style={styles.noDataText}>No crisis events recorded.</Text>
+                )}
             </View>
         </ScrollView>
     );

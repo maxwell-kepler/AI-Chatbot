@@ -12,17 +12,16 @@ import {
     AppState
 } from 'react-native';
 import { useAuth } from '../../hooks/useAuth';
-import { useFocusEffect, useIsFocused } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { theme } from '../../styles/theme';
 import ChatBubble from '../../components/specific/Chat/ChatBubble';
 import MessageInput from '../../components/specific/Chat/MessageInput';
 import { chatWithGemini } from '../../services/gemini/geminiService';
 import { conversationService } from '../../services/database/conversationService';
+import { resourceMatchingService } from '../../services/matching/resourceMatchingService';
 import LoadingScreen from '../LoadingScreen';
 import styles from './styles';
-import { WELCOME_MESSAGE } from '../../config/promptConfig';
-
-
+import { WELCOME_MESSAGE, CRISIS_RESOURCES } from '../../config/promptConfig';
 
 const ChatScreen = () => {
     const { user, loading: authLoading } = useAuth();
@@ -35,7 +34,6 @@ const ChatScreen = () => {
     const [conversationId, setConversationId] = useState(null);
     const [currentStatus, setCurrentStatus] = useState(null);
     const scrollViewRef = useRef(null);
-    const isFocused = useIsFocused();
     const appStateRef = useRef(AppState.currentState);
     const backgroundTimerRef = useRef(null);
 
@@ -175,17 +173,17 @@ const ChatScreen = () => {
         try {
             let currentConversationId = conversationId;
 
-            // Initialize conversation if this is the first user message
             if (!currentConversationId) {
                 currentConversationId = await initializeConversation();
                 if (!currentConversationId) return;
 
-                // Now that we have a conversation, save the welcome message and the user's message
                 await conversationService.addMessage(
                     currentConversationId,
                     WELCOME_MESSAGE,
                     'ai'
                 );
+
+                setConversationId(currentConversationId);
             }
 
             const newMessage = {
@@ -199,27 +197,50 @@ const ChatScreen = () => {
             scrollToBottom();
 
             try {
-                // Save user message
                 await conversationService.addMessage(
                     currentConversationId,
                     message,
                     'user'
                 );
 
-                // Only update status if we're not already active
-                if (currentStatus !== 'active') {
-                    await conversationService.updateConversationStatus(
-                        currentConversationId,
-                        'active'
+                const response = await chatWithGemini(message);
+                const { text, isCrisis, emotionalState, insights } = response;
+
+                const shouldRecommendResources = emotionalState.state.some(state =>
+                    ['anxiety', 'depression', 'stress'].includes(state)) ||
+                    message.toLowerCase().includes('help') ||
+                    message.toLowerCase().includes('resource') ||
+                    message.toLowerCase().includes('support');
+
+                if (shouldRecommendResources) {
+                    const matchedResources = await resourceMatchingService.getMatchingResources(
+                        'moderate',
+                        emotionalState,
+                        message
                     );
-                    setCurrentStatus('active');
+                    if (matchedResources.success && matchedResources.data.length > 0) {
+                        const resourceMessage = formatResourceRecommendations(matchedResources.data);
+                        setMessages(prev => [...prev, {
+                            text: "Based on what you're sharing, these resources might be helpful:",
+                            isUser: false,
+                            timestamp: new Date()
+                        }, {
+                            text: resourceMessage,
+                            isUser: false,
+                            timestamp: new Date(),
+                            isResourceRecommendation: true
+                        }]);
+
+                        matchedResources.data.forEach(resource => {
+                            resourceMatchingService.recordResourceAccess(
+                                user.uid,
+                                resource.resource_ID,
+                                'chat'
+                            );
+                        });
+                    }
                 }
 
-                // Get AI response
-                const response = await chatWithGemini(message);
-                const { text, isCrisis, emotionalState } = response;
-
-                // Save AI response
                 await conversationService.addMessage(
                     currentConversationId,
                     text,
@@ -235,15 +256,11 @@ const ChatScreen = () => {
 
                 setMessages(prev => [...prev, aiResponse]);
 
-                // Handle crisis situation if detected
                 if (isCrisis) {
-                    await handleCrisisSituation(message);
+                    await handleCrisisSituation(message, emotionalState, currentConversationId);
                 }
 
-                // Update risk level based on emotional state
-                if (emotionalState) {
-                    await updateRiskLevel(emotionalState);
-                }
+                await updateRiskLevel(emotionalState, insights, currentConversationId);
 
             } catch (error) {
                 console.error('Chat error:', error);
@@ -266,33 +283,104 @@ const ChatScreen = () => {
     };
 
 
-
-    const handleCrisisSituation = async (message) => {
+    const handleCrisisSituation = async (message, emotionalState, currentConversationId) => {
         try {
-            await conversationService.recordCrisisEvent(
-                conversationId,
-                user.uid,
+            const matchedResources = await resourceMatchingService.getMatchingResources(
                 'severe',
-                'AI detected crisis keywords in user message: ' + message
+                emotionalState,
+                message
             );
-            await conversationService.updateRiskLevel(conversationId, 'high');
+
+            if (!matchedResources.success || matchedResources.data.length === 0) {
+                const crisisText = CRISIS_RESOURCES.replace(
+                    /(\d{3}-\d{3}-\d{4})/g,
+                    match => `[${match}](tel:${match.replace(/-/g, '')})`
+                );
+
+                setMessages(prev => [...prev, {
+                    text: crisisText,
+                    isUser: false,
+                    timestamp: new Date(),
+                    isCrisisAlert: true
+                }]);
+            } else {
+                setMessages(prev => [...prev, {
+                    text: "Based on what you're sharing, these resources might be helpful:",
+                    isUser: false,
+                    timestamp: new Date()
+                }, {
+                    text: formatResourceRecommendations(matchedResources.data),
+                    isUser: false,
+                    timestamp: new Date(),
+                    isResourceRecommendation: true
+                }]);
+            }
+
+            // Record resource access
+            matchedResources.data.forEach(resource => {
+                resourceMatchingService.recordResourceAccess(
+                    user.uid,
+                    resource.resource_ID,
+                    'crisis'
+                );
+            });
+
         } catch (error) {
-            console.error('Error handling crisis situation:', error);
+            console.error('Error in crisis handling:', error);
         }
     };
 
-    const updateRiskLevel = async (emotionalState) => {
+
+    const formatResourceRecommendations = (resources) => {
+        let message = "";
+        resources.forEach(resource => {
+            message += `${resource.name.toUpperCase()}\n`;
+            message += `${resource.description}\n\n`;
+            if (resource.phone) {
+                message += `Call: [${resource.phone}](tel:${resource.phone})\n`;
+            }
+            if (resource.hours) {
+                message += `Hours: ${resource.hours}\n`;
+            }
+            if (resource.address && resource.address !== 'Calgary, AB') {
+                message += `[Open Map](https://maps.google.com/?q=${encodeURIComponent(resource.address)})\n`;
+            }
+            if (resource.website_URL) {
+                message += `[Visit Website](${resource.website_URL})\n`;
+            }
+            message += '\n';
+        });
+        return message;
+    };
+
+    const updateRiskLevel = async (emotionalState, insights, currentConversationId) => {
+        if (!currentConversationId) {
+            console.warn('No active conversation for risk level update');
+            return;
+        }
+
         try {
-            // Determine risk level based on emotional state
             let riskLevel = 'low';
+
             if (emotionalState.state.includes('crisis')) {
                 riskLevel = 'high';
-            } else if (emotionalState.state.includes('anxiety') ||
-                emotionalState.state.includes('depression')) {
+            } else if (insights.patternCounts.emotional.anxiety > 2 ||
+                insights.patternCounts.emotional.depression > 2) {
                 riskLevel = 'medium';
             }
 
-            await conversationService.updateRiskLevel(conversationId, riskLevel);
+            await conversationService.updateRiskLevel(currentConversationId, riskLevel);
+
+            if (riskLevel === 'medium' &&
+                insights.messageCount > 5 &&
+                Object.values(insights.patternCounts.emotional).some(count => count > 3)) {
+                await conversationService.recordCrisisEvent(
+                    currentConversationId,
+                    user.uid,
+                    'moderate',
+                    'Multiple instances of elevated emotional distress detected'
+                );
+            }
         } catch (error) {
             console.error('Error updating risk level:', error);
         }

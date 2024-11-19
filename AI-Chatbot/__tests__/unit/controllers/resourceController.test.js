@@ -1,3 +1,4 @@
+// __tests__/unit/controllers/resourceController.test.js
 const request = require('supertest');
 const app = require('../../../server-app');
 const db = require('../../../config/database');

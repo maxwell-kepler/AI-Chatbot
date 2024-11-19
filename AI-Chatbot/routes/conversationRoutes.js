@@ -6,41 +6,25 @@ const conversationController = require('../controllers/conversationController');
 console.log('Conversation controller methods:', {
     createConversation: !!conversationController.createConversation,
     addMessage: !!conversationController.addMessage,
+    recordCrisisEvent: !!conversationController.recordCrisisEvent,
     updateConversationStatus: !!conversationController.updateConversationStatus,
+    updateRiskLevel: !!conversationController.updateRiskLevel,
     getConversationMessages: !!conversationController.getConversationMessages,
-    generateSummary: !!conversationController.generateSummary
-});
+    generateSummary: !!conversationController.generateSummary,
+    getLatestSummary: !!conversationController.getLatestSummary
+}, '\n');
 
 router.post('/', conversationController.createConversation);
 router.post('/:conversationId/messages', conversationController.addMessage);
+router.post('/:conversationId/crisis-events', conversationController.recordCrisisEvent);
 router.put('/:conversationId/status', conversationController.updateConversationStatus);
+router.put('/:conversationId/risk-level', conversationController.updateRiskLevel);
 router.get('/:conversationId/messages', conversationController.getConversationMessages);
 router.get('/:conversationId/summary', conversationController.generateSummary);
-router.get('/:conversationId/status', async (req, res, next) => {
-    try {
-        const { conversationId } = req.params;
-        const [conversation] = await db.execute(
-            'SELECT status, last_activity FROM Conversations WHERE conversation_ID = ?',
-            [conversationId]
-        );
+router.get('/:conversationId/summary/latest', conversationController.getLatestSummary);
+router.post('/:conversationId/crisis-events', conversationController.recordCrisisEvent);
+router.put('/:conversationId/crisis-events/:eventId/resolution', conversationController.updateCrisisResolution);
+router.get('/:conversationId/crisis-events', conversationController.getCrisisEvents);
 
-        if (!conversation.length) {
-            return res.status(404).json({
-                success: false,
-                error: 'Conversation not found'
-            });
-        }
-
-        res.json({
-            success: true,
-            data: {
-                status: conversation[0].status,
-                lastActivity: conversation[0].last_activity
-            }
-        });
-    } catch (error) {
-        next(error);
-    }
-});
 
 module.exports = router;

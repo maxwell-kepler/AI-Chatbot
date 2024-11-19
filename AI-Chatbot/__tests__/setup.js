@@ -1,3 +1,4 @@
+// __tests__/setup.js
 const db = require("../config/database");
 jest.setTimeout(10000);
 

@@ -1,26 +1,6 @@
 -- SQL/PopulateDatabase.sql
 USE `mental_health_support`;
 
--- Insert Firebase login first (since Users depends on it)
-INSERT INTO Firebase_Login (ID, email, password) VALUES
-('f839b71d-e5c1-4a61-a4c1-cd4df62fbb4c', 'test@example.com', '$2b$10$ExampleHashedPassword');
-
--- Insert User with reference to Firebase login
-INSERT INTO Users (
-    user_ID,
-    name,
-    create_at,
-    last_login,
-    firebase_ID
-) VALUES (
-    'u123e4567-e89b-12d3-a456-426614174000',
-    'Test User',
-    CURRENT_TIMESTAMP,
-    CURRENT_TIMESTAMP,
-    'f839b71d-e5c1-4a61-a4c1-cd4df62fbb4c'
-);
-
--- Categories with renamed columns
 INSERT INTO Categories (name, icon) VALUES
     ('Crisis Support', 'alert-circle'),
     ('Counseling', 'message-circle'),
@@ -29,15 +9,16 @@ INSERT INTO Categories (name, icon) VALUES
     ('Addiction', 'help-circle'),
     ('Youth Services', 'smile');
     
-    
--- Tags with renamed columns
 INSERT INTO Tags (name) VALUES
     ('Free'), ('Confidential'), ('Crisis Support'), ('Sliding Scale'),
     ('Professional'), ('Multiple Languages'), ('Youth'), ('Family Services'),
     ('Referrals'), ('Assessment'), ('Education'), ('Recovery'), ('Residential'),
     ('Walk-in'), ('Family'), ('No Appointment'), ('Women'), ('Immigrant Services'),
     ('Counselling'), ('Addiction'), ('Shelter'), ('Outreach'), ('Treatment'),
-    ('Therapy');
+    ('Therapy'), ('Crisis Intervention'), ('24/7 Support'), ('Emergency Housing'),
+    ('Immediate Access'), ('Crisis Transport'), ('Safety Planning'),
+    ('Emergency Services'), ('Immediate Help')
+ON DUPLICATE KEY UPDATE name = VALUES(name);
 
 INSERT INTO Resources (resource_ID, name, description, category_ID, phone, address, hours, website_URL) VALUES
 (1, 'Distress Centre Calgary', '24/7 crisis support, professional counselling and referrals.', 
@@ -75,10 +56,28 @@ INSERT INTO Resources (resource_ID, name, description, category_ID, phone, addre
     '403-269-9888', '200, 1000 8 Ave SW, Calgary, AB T2P 3M7', 'Mon-Thu: 8:30AM-8:00PM, Fri: 8:30AM-4:30PM', 'https://caryacalgary.ca'),
 (12, 'ConnecTeen', 'Crisis support and resources specifically for teens.',
     (SELECT category_ID FROM Categories WHERE name = 'Crisis Support'),
-    '403-264-8336', 'Calgary, AB', '24/7', 'https://www.distresscentre.com/connectteen');
+    '403-264-8336', 'Calgary, AB', '24/7', 'https://www.distresscentre.com/connectteen'),
+(13, 'Mobile Response Team', 'Crisis outreach team providing immediate mental health support.',
+    (SELECT category_ID FROM Categories WHERE name = 'Crisis Support'),
+    '403-266-4357', 'Calgary, AB', '24/7', 'https://www.albertahealthservices.ca/mht/mht.aspx'),
+(14, 'Access Mental Health - Urgent', 'Fast-track mental health service access during crisis.',
+    (SELECT category_ID FROM Categories WHERE name = 'Crisis Support'),
+    '403-943-1500', 'Calgary, AB', 'Mon-Fri: 8AM-5PM', 'https://www.albertahealthservices.ca'),
+(15, 'Urgent Mental Health Walk-In', 'Same-day crisis counselling and psychiatric support.',
+    (SELECT category_ID FROM Categories WHERE name = 'Crisis Support'),
+    '403-955-6200', 'South Calgary Health Centre', 'Mon-Fri: 8AM-10PM', 'https://www.albertahealthservices.ca'),
+(16, 'Crisis Housing Program', 'Emergency temporary housing during mental health crisis.',
+    (SELECT category_ID FROM Categories WHERE name = 'Crisis Support'),
+    '403-299-9699', 'Calgary, AB', '24/7', 'https://www.woodshomes.ca'),
+(17, 'Teen Crisis Line', 'Crisis support specifically for teens and young adults.',
+    (SELECT category_ID FROM Categories WHERE name = 'Youth Services'),
+    '403-264-8336', 'Calgary, AB', '24/7', 'https://www.distresscentre.com/teen-line'),
+(18, 'Addiction Crisis Service', 'Immediate support for substance-related crisis.',
+    (SELECT category_ID FROM Categories WHERE name = 'Addiction'),
+    '403-297-4664', 'Calgary, AB', '24/7', 'https://www.albertahealthservices.ca');
 
 INSERT INTO Used_In (resource_ID, tag_ID)
-SELECT 1, tag_ID FROM Tags WHERE name IN ('Free', 'Confidential', 'Crisis Support');
+SELECT 1, tag_ID FROM Tags WHERE name IN ('Free', 'Confidential', 'Crisis Support', '24/7 Support');
 
 INSERT INTO Used_In (resource_ID, tag_ID)
 SELECT 2, tag_ID FROM Tags WHERE name IN ('Sliding Scale', 'Professional', 'Multiple Languages');
@@ -113,9 +112,60 @@ SELECT 11, tag_ID FROM Tags WHERE name IN ('Therapy', 'Family', 'Sliding Scale')
 INSERT INTO Used_In (resource_ID, tag_ID)
 SELECT 12, tag_ID FROM Tags WHERE name IN ('Youth', 'Crisis Support', 'Confidential');
 
-SELECT * FROM Firebase_Login;
-SELECT * FROM Users;
-SELECT * FROM Categories;
-SELECT * FROM Tags;
-SELECT * FROM Resources;
-SELECT * FROM Used_In;
+INSERT INTO Used_In (resource_ID, tag_ID)
+SELECT 13, tag_ID FROM Tags WHERE name IN ('Crisis Support', 'Professional', '24/7 Support', 'Crisis Intervention', 'Emergency Services');
+
+INSERT INTO Used_In (resource_ID, tag_ID)
+SELECT 14, tag_ID FROM Tags WHERE name IN ('Crisis Support', 'Professional', 'Assessment', 'Immediate Access');
+
+INSERT INTO Used_In (resource_ID, tag_ID)
+SELECT 15, tag_ID FROM Tags WHERE name IN ('Crisis Support', 'Walk-in', 'Professional', 'Immediate Help');
+
+INSERT INTO Used_In (resource_ID, tag_ID)
+SELECT 16, tag_ID FROM Tags WHERE name IN ('Crisis Support', 'Shelter', 'Residential', 'Emergency Housing');
+
+INSERT INTO Used_In (resource_ID, tag_ID)
+SELECT 17, tag_ID FROM Tags WHERE name IN ('Crisis Support', 'Youth', 'Confidential', '24/7 Support');
+
+INSERT INTO Used_In (resource_ID, tag_ID)
+SELECT 18, tag_ID FROM Tags WHERE name IN ('Crisis Support', 'Addiction', 'Treatment', 'Immediate Help');
+
+INSERT INTO Used_In (resource_ID, tag_ID)
+SELECT r.resource_ID, t.tag_ID
+FROM Resources r
+CROSS JOIN Tags t
+WHERE r.category_ID = (SELECT category_ID FROM Categories WHERE name = 'Crisis Support')
+AND t.name IN ('Crisis Support', 'Professional', '24/7 Support', 'Crisis Intervention', 'Safety Planning', 'Immediate Help')
+ON DUPLICATE KEY UPDATE resource_ID = VALUES(resource_ID);
+
+INSERT INTO Used_In (resource_ID, tag_ID)
+SELECT r.resource_ID, t.tag_ID
+FROM Resources r
+CROSS JOIN Tags t
+WHERE r.name = 'Distress Centre Calgary'
+AND t.name IN ('Crisis Support', '24/7 Support', 'Crisis Intervention', 'Safety Planning', 'Immediate Help', 'Emergency Services')
+ON DUPLICATE KEY UPDATE resource_ID = VALUES(resource_ID);
+
+INSERT INTO Used_In (resource_ID, tag_ID)
+SELECT r.resource_ID, t.tag_ID
+FROM Resources r
+CROSS JOIN Tags t
+WHERE r.name = 'Mobile Response Team'
+AND t.name IN ('Crisis Support', 'Emergency Services', 'Crisis Intervention', 'Professional', 'Immediate Help')
+ON DUPLICATE KEY UPDATE resource_ID = VALUES(resource_ID);
+
+INSERT INTO Used_In (resource_ID, tag_ID) 
+SELECT r.resource_ID, t.tag_ID
+FROM Resources r
+CROSS JOIN Tags t
+WHERE r.name = 'Crisis Housing Program'
+AND t.name IN ('Crisis Support', 'Emergency Housing', 'Crisis Intervention', 'Immediate Help')
+ON DUPLICATE KEY UPDATE resource_ID = VALUES(resource_ID);
+
+INSERT INTO Used_In (resource_ID, tag_ID)
+SELECT r.resource_ID, t.tag_ID
+FROM Resources r
+CROSS JOIN Tags t
+WHERE r.name IN ('Teen Crisis Line', 'ConnecTeen')
+AND t.name IN ('Crisis Support', 'Crisis Intervention', 'Youth', 'Immediate Help', 'Safety Planning')
+ON DUPLICATE KEY UPDATE resource_ID = VALUES(resource_ID);

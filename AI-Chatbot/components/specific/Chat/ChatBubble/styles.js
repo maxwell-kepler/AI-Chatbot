@@ -47,4 +47,8 @@ export default StyleSheet.create({
     aiTimestamp: {
         color: theme.colors.neutral.grey600,
     },
+    link: {
+        color: theme.colors.primary.main,
+        textDecorationLine: 'underline',
+    }
 });

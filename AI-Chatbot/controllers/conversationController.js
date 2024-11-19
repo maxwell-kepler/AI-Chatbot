@@ -191,7 +191,7 @@ class ConversationController {
         const validTransitions = {
             'active': ['liminal', 'completed'],
             'liminal': ['active', 'completed'],
-            'completed': [] // Cannot transition out of completed
+            'completed': ['active', 'liminal']
         };
 
         return validTransitions[currentStatus]?.includes(newStatus) || false;
@@ -203,7 +203,7 @@ class ConversationController {
             await connection.beginTransaction();
 
             const { conversationId } = req.params;
-            const { status, summary } = req.body;
+            const { status } = req.body;
 
             // Validate the new status
             const validStatuses = ['active', 'liminal', 'completed'];
@@ -228,10 +228,7 @@ class ConversationController {
                 return res.json({
                     success: true,
                     message: 'Conversation status unchanged',
-                    data: {
-                        status: currentStatus,
-                        summary: summary || null
-                    }
+                    data: { status: currentStatus }
                 });
             }
 
@@ -243,22 +240,36 @@ class ConversationController {
             // Update conversation
             const updateData = {
                 status,
-                summary: summary || null,
                 end_time: status === 'completed' ? formatDateForMySQL(new Date()) : null
             };
 
-            const updateQuery = `
-                UPDATE Conversations 
-                SET status = ?,
-                    summary = ?,
-                    end_time = ?
-                WHERE conversation_ID = ?
-            `;
-
             await connection.execute(
-                updateQuery,
-                [updateData.status, updateData.summary, updateData.end_time, conversationId]
+                'UPDATE Conversations SET status = ?, end_time = ? WHERE conversation_ID = ?',
+                [updateData.status, updateData.end_time, conversationId]
             );
+
+            if (status === 'completed' || status === 'liminal') {
+                const summaryResult = await summaryService.generateSummary(conversationId);
+                if (summaryResult.success) {
+                    const parsedSummary = parseSummary(summaryResult.summary);
+                    if (parsedSummary.success) {
+                        await connection.execute(
+                            `INSERT INTO Conversation_Summaries 
+                            (conversation_ID, emotions, main_concerns, progress_notes, 
+                            recommendations, raw_summary)
+                            VALUES (?, ?, ?, ?, ?, ?)`,
+                            [
+                                conversationId,
+                                JSON.stringify(parsedSummary.parsed.emotions),
+                                JSON.stringify(parsedSummary.parsed.main_concerns),
+                                JSON.stringify(parsedSummary.parsed.progress_notes),
+                                JSON.stringify(parsedSummary.parsed.recommendations),
+                                parsedSummary.raw
+                            ]
+                        );
+                    }
+                }
+            }
 
             await connection.commit();
 
@@ -270,9 +281,6 @@ class ConversationController {
 
         } catch (error) {
             await connection.rollback();
-            if (process.env.NODE_ENV !== 'test') {
-                console.error('Error in updateConversationStatus:', error);
-            }
             next(error);
         } finally {
             connection.release();
@@ -313,86 +321,223 @@ class ConversationController {
 
 
     generateSummary = async (req, res, next) => {
-        const connection = await db.getConnection();
         try {
-            await connection.beginTransaction();
-
             const { conversationId } = req.params;
 
-            // Fetch messages
-            const [messages] = await connection.execute(
-                `SELECT 
-                    content,
-                    sender_type,
-                    emotional_state,
-                    timestamp
-                FROM Messages 
-                WHERE conversation_ID = ?
-                ORDER BY timestamp ASC`,
-                [conversationId]
-            );
+            // Generate AI summary using the updated service
+            const summaryResult = await summaryService.generateSummary(conversationId);
 
-            if (messages.length === 0) {
-                await connection.rollback();
-                return res.json({
-                    success: true,
-                    data: {
-                        summary: "No messages in conversation."
-                    }
-                });
+            if (!summaryResult.success) {
+                throw new Error(summaryResult.error || 'Failed to generate summary');
             }
 
-            // Generate AI summary
-            const aiSummaryResult = await summaryService.generateSummary(messages);
-
-            if (!aiSummaryResult.success) {
-                throw new Error('Failed to generate AI summary');
-            }
-
-            // Parse the summary into structured format
-            const parsedResult = parseSummary(aiSummaryResult.summary);
+            // Parse the summary
+            const parsedResult = parseSummary(summaryResult.summary);
 
             if (!parsedResult.success) {
                 throw new Error('Failed to parse summary structure');
             }
 
-            // Save structured summary
-            const [dbInsertResult] = await connection.execute(
-                `INSERT INTO Conversation_Summaries 
-                (conversation_ID, emotions, main_concerns, progress_notes, 
-                recommendations, raw_summary)
-                VALUES (?, ?, ?, ?, ?, ?)`,
-                [
-                    conversationId,
-                    JSON.stringify(parsedResult.parsed.emotions),
-                    JSON.stringify(parsedResult.parsed.main_concerns),
-                    JSON.stringify(parsedResult.parsed.progress_notes),
-                    JSON.stringify(parsedResult.parsed.recommendations),
-                    parsedResult.raw
-                ]
+            const connection = await db.getConnection();
+            try {
+                await connection.beginTransaction();
+
+                // Save new summary
+                await connection.execute(
+                    `INSERT INTO Conversation_Summaries 
+                    (conversation_ID, emotions, main_concerns, progress_notes, 
+                    recommendations, raw_summary)
+                    VALUES (?, ?, ?, ?, ?, ?)`,
+                    [
+                        conversationId,
+                        JSON.stringify(parsedResult.parsed.emotions),
+                        JSON.stringify(parsedResult.parsed.main_concerns),
+                        JSON.stringify(parsedResult.parsed.progress_notes),
+                        JSON.stringify(parsedResult.parsed.recommendations),
+                        parsedResult.raw
+                    ]
+                );
+
+                await connection.commit();
+
+                res.json({
+                    success: true,
+                    data: {
+                        summary: parsedResult.raw,
+                        structured: parsedResult.parsed
+                    }
+                });
+            } catch (error) {
+                await connection.rollback();
+                throw error;
+            } finally {
+                connection.release();
+            }
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    getLatestSummary = async (req, res, next) => {
+        try {
+            const { conversationId } = req.params;
+
+            const [summaries] = await db.execute(
+                `SELECT * FROM Conversation_Summaries 
+                WHERE conversation_ID = ?
+                ORDER BY created_at DESC
+                LIMIT 1`,
+                [conversationId]
             );
 
-            // Update conversation with summary reference
-            await connection.execute(
-                'UPDATE Conversations SET summary_ID = ? WHERE conversation_ID = ?',
-                [dbInsertResult.insertId, conversationId]
+            res.json({
+                success: true,
+                data: summaries[0] || null
+            });
+
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    recordCrisisEvent = async (req, res, next) => {
+        const connection = await db.getConnection();
+        try {
+            await connection.beginTransaction();
+
+            const { conversationId } = req.params;
+            const { userId: firebaseId, severityLevel, notes, actionTaken, timestamp } = req.body;
+
+            const [users] = await connection.execute(
+                'SELECT user_ID FROM Users WHERE firebase_ID = ?',
+                [firebaseId]
+            );
+
+            if (users.length === 0) {
+                throw new Error('User not found');
+            }
+
+            const mysqlUserId = users[0].user_ID;
+
+            const [result] = await connection.execute(
+                `INSERT INTO Crisis_Events 
+                (conversation_ID, user_ID, severity_level, action_taken, timestamp)
+                VALUES (?, ?, ?, ?, ?)`,
+                [
+                    conversationId,
+                    mysqlUserId,
+                    severityLevel,
+                    actionTaken || 'Crisis resources provided', // Default action
+                    formatDateForMySQL(timestamp)
+                ]
             );
 
             await connection.commit();
 
-            res.json({
+            res.status(201).json({
                 success: true,
                 data: {
-                    summary: parsedResult.raw,
-                    structured: parsedResult.parsed
+                    eventId: result.insertId,
+                    conversationId,
+                    severityLevel,
+                    timestamp
                 }
             });
 
         } catch (error) {
             await connection.rollback();
-            if (process.env.NODE_ENV !== 'test') {
-                console.error('Error generating structured summary:', error);
+            next(error);
+        } finally {
+            connection.release();
+        }
+    }
+
+    updateCrisisResolution = async (req, res, next) => {
+        const connection = await db.getConnection();
+        try {
+            const { conversationId, eventId } = req.params;
+            const { resolutionNotes, actionTaken } = req.body;
+
+            const [result] = await connection.execute(
+                `UPDATE Crisis_Events 
+                SET resolution_notes = ?,
+                    action_taken = ?,
+                    resolved_at = CURRENT_TIMESTAMP
+                WHERE event_ID = ? AND conversation_ID = ?`,
+                [resolutionNotes, actionTaken, eventId, conversationId]
+            );
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Crisis event not found'
+                });
             }
+
+            res.json({
+                success: true,
+                message: 'Crisis resolution updated successfully'
+            });
+
+        } catch (error) {
+            next(error);
+        } finally {
+            connection.release();
+        }
+    }
+
+    getCrisisEvents = async (req, res, next) => {
+        try {
+            const { conversationId } = req.params;
+
+            const [events] = await db.execute(
+                `SELECT 
+                    event_ID,
+                    severity_level,
+                    action_taken,
+                    timestamp,
+                    resolution_notes,
+                    resolved_at
+                FROM Crisis_Events 
+                WHERE conversation_ID = ?
+                ORDER BY timestamp DESC`,
+                [conversationId]
+            );
+
+            res.json({
+                success: true,
+                data: events
+            });
+
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    updateRiskLevel = async (req, res, next) => {
+        const connection = await db.getConnection();
+        try {
+            const { conversationId } = req.params;
+            const { riskLevel } = req.body;
+
+            if (!['low', 'medium', 'high'].includes(riskLevel)) {
+                throw new Error('Invalid risk level');
+            }
+
+            await connection.execute(
+                'UPDATE Conversations SET risk_level = ? WHERE conversation_ID = ?',
+                [riskLevel, conversationId]
+            );
+
+            res.json({
+                success: true,
+                data: {
+                    conversationId,
+                    riskLevel
+                }
+            });
+
+        } catch (error) {
             next(error);
         } finally {
             connection.release();

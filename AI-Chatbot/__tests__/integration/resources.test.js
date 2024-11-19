@@ -1,3 +1,4 @@
+// __tests__/integration/resources.test.js
 const request = require('supertest');
 const app = require('../../server-app');
 const db = require('../../config/database');

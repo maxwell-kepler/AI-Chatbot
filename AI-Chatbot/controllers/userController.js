@@ -204,9 +204,8 @@ class UserController {
             );
 
             for (const conv of conversations) {
-                // set summary_ID to NULL in Conversations to break circular reference
                 await connection.execute(
-                    'UPDATE Conversations SET summary_ID = NULL WHERE conversation_ID = ?',
+                    'DELETE FROM Conversation_Summaries WHERE conversation_ID = ?',
                     [conv.conversation_ID]
                 );
 
@@ -214,12 +213,8 @@ class UserController {
                     'DELETE FROM Messages WHERE conversation_ID = ?',
                     [conv.conversation_ID]
                 );
-
-                await connection.execute(
-                    'DELETE FROM Conversation_Summaries WHERE conversation_ID = ?',
-                    [conv.conversation_ID]
-                );
             }
+
             await connection.execute(
                 'DELETE FROM Conversations WHERE user_ID = ?',
                 [userId]
