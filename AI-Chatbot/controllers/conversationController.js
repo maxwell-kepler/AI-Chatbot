@@ -406,7 +406,7 @@ class ConversationController {
             await connection.beginTransaction();
 
             const { conversationId } = req.params;
-            const { userId: firebaseId, severityLevel, notes, timestamp } = req.body;
+            const { userId: firebaseId, severityLevel, notes, actionTaken, timestamp } = req.body;
 
             const [users] = await connection.execute(
                 'SELECT user_ID FROM Users WHERE firebase_ID = ?',
@@ -427,7 +427,7 @@ class ConversationController {
                     conversationId,
                     mysqlUserId,
                     severityLevel,
-                    notes,
+                    actionTaken || 'Crisis resources provided', // Default action
                     formatDateForMySQL(timestamp)
                 ]
             );
@@ -449,6 +449,68 @@ class ConversationController {
             next(error);
         } finally {
             connection.release();
+        }
+    }
+
+    updateCrisisResolution = async (req, res, next) => {
+        const connection = await db.getConnection();
+        try {
+            const { conversationId, eventId } = req.params;
+            const { resolutionNotes, actionTaken } = req.body;
+
+            const [result] = await connection.execute(
+                `UPDATE Crisis_Events 
+                SET resolution_notes = ?,
+                    action_taken = ?,
+                    resolved_at = CURRENT_TIMESTAMP
+                WHERE event_ID = ? AND conversation_ID = ?`,
+                [resolutionNotes, actionTaken, eventId, conversationId]
+            );
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Crisis event not found'
+                });
+            }
+
+            res.json({
+                success: true,
+                message: 'Crisis resolution updated successfully'
+            });
+
+        } catch (error) {
+            next(error);
+        } finally {
+            connection.release();
+        }
+    }
+
+    getCrisisEvents = async (req, res, next) => {
+        try {
+            const { conversationId } = req.params;
+
+            const [events] = await db.execute(
+                `SELECT 
+                    event_ID,
+                    severity_level,
+                    action_taken,
+                    timestamp,
+                    resolution_notes,
+                    resolved_at
+                FROM Crisis_Events 
+                WHERE conversation_ID = ?
+                ORDER BY timestamp DESC`,
+                [conversationId]
+            );
+
+            res.json({
+                success: true,
+                data: events
+            });
+
+        } catch (error) {
+            next(error);
         }
     }
 

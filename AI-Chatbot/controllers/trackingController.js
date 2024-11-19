@@ -278,6 +278,56 @@ class TrackingController {
             next(error);
         }
     };
+
+    getCrisisEvents = async (req, res, next) => {
+        try {
+            const { firebaseId } = req.params;
+            console.log('Fetching crisis events for firebaseId:', firebaseId);
+
+            const [users] = await db.execute(
+                'SELECT user_ID FROM Users WHERE firebase_ID = ?',
+                [firebaseId]
+            );
+
+            if (users.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'User not found'
+                });
+            }
+
+            const userId = users[0].user_ID;
+
+            const query = `
+                SELECT 
+                    ce.event_ID,
+                    ce.conversation_ID,
+                    ce.severity_level,
+                    ce.action_taken,
+                    ce.timestamp,
+                    ce.resolution_notes,
+                    ce.resolved_at,
+                    c.risk_level as conversation_risk_level
+                FROM Crisis_Events ce
+                JOIN Conversations c ON ce.conversation_ID = c.conversation_ID
+                WHERE ce.user_ID = ?
+                ORDER BY ce.timestamp DESC
+            `;
+
+            const [events] = await db.execute(query, [userId]);
+
+            console.log(`Found ${events.length} crisis events for user`);
+
+            res.json({
+                success: true,
+                data: events
+            });
+
+        } catch (error) {
+            console.error('Error in getCrisisEvents:', error);
+            next(error);
+        }
+    };
 }
 
 module.exports = new TrackingController();

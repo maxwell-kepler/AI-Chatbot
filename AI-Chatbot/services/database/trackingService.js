@@ -72,5 +72,35 @@ export const trackingService = {
                 error: error.message
             };
         }
+    },
+
+    getCrisisEvents: async (firebaseId) => {
+        try {
+            const response = await fetch(
+                `${API_URL}/tracking/firebase/${firebaseId}/crisis-events`
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to fetch crisis events');
+            }
+
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to fetch crisis events');
+            }
+
+            return {
+                success: true,
+                data: data.data
+            };
+        } catch (error) {
+            console.error('Error fetching crisis events:', error);
+            return {
+                success: false,
+                error: error.message,
+                data: [] // Provide empty array as fallback
+            };
+        }
     }
 };

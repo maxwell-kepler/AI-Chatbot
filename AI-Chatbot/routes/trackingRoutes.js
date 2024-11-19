@@ -12,5 +12,6 @@ console.log('Tracking controller methods:', {
 router.get('/firebase/:firebaseId/emotional-history', trackingController.getEmotionalHistory);
 router.get('/firebase/:firebaseId/conversation-summaries', trackingController.getConversationSummaries);
 router.get('/firebase/:firebaseId/emotional-patterns', trackingController.getEmotionalPatterns);
+router.get('/firebase/:firebaseId/crisis-events', trackingController.getCrisisEvents);
 
 module.exports = router;

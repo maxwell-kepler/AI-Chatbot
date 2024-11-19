@@ -199,7 +199,8 @@ const conversationService = {
                     userId,
                     severityLevel,
                     notes,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
+                    actionTaken: 'Crisis resources provided', // Default action
                 })
             });
 
@@ -221,6 +222,68 @@ const conversationService = {
             };
         }
     },
+
+    updateCrisisResolution: async (conversationId, eventId, resolutionData) => {
+        try {
+            const response = await fetch(
+                `${API_URL}/conversations/${conversationId}/crisis-events/${eventId}/resolution`,
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        resolutionNotes: resolutionData.notes,
+                        actionTaken: resolutionData.action,
+                        resolvedAt: new Date().toISOString()
+                    })
+                }
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to update crisis resolution');
+            }
+
+            const data = await response.json();
+            return {
+                success: true,
+                data: data.data
+            };
+        } catch (error) {
+            console.error('Error updating crisis resolution:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    },
+
+    getCrisisEvents: async (conversationId) => {
+        try {
+            const response = await fetch(
+                `${API_URL}/conversations/${conversationId}/crisis-events`
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to fetch crisis events');
+            }
+
+            const data = await response.json();
+            return {
+                success: true,
+                data: data.data
+            };
+        } catch (error) {
+            console.error('Error fetching crisis events:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    },
+
 
     updateRiskLevel: async (conversationId, riskLevel) => {
         try {

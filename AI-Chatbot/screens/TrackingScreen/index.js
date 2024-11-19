@@ -13,6 +13,7 @@ import { theme } from '../../styles/theme';
 import { trackingService } from '../../services/database/trackingService';
 import styles from './styles';
 import ConversationSummaryCard from '../../components/specific/Tracking/ConversationSummaryCard';
+import CrisisEventCard from '../../components/specific/Tracking/CrisisEventCard';
 
 const TrackingScreen = () => {
     const { user, loading: authLoading } = useAuth();
@@ -22,6 +23,8 @@ const TrackingScreen = () => {
     const [summaries, setSummaries] = useState([]);
     const [patterns, setPatterns] = useState([]);
     const [error, setError] = useState(null);
+    const [crisisEvents, setCrisisEvents] = useState([]);
+    const [crisisError, setCrisisError] = useState(null);
 
     const fetchData = async () => {
         if (!user) {
@@ -33,10 +36,18 @@ const TrackingScreen = () => {
         try {
             setLoading(true);
             setError(null);
-            const [emotionalResult, summariesResult, patternsResult] = await Promise.all([
+            setCrisisError(null);
+
+            const [
+                emotionalResult,
+                summariesResult,
+                patternsResult,
+                crisisResult
+            ] = await Promise.all([
                 trackingService.getEmotionalHistory(user.uid),
                 trackingService.getConversationSummaries(user.uid),
-                trackingService.getEmotionalPatterns(user.uid)
+                trackingService.getEmotionalPatterns(user.uid),
+                trackingService.getCrisisEvents(user.uid)
             ]);
 
             if (emotionalResult.success) {
@@ -47,6 +58,11 @@ const TrackingScreen = () => {
             }
             if (patternsResult.success) {
                 setPatterns(patternsResult.data);
+            }
+            if (crisisResult.success) {
+                setCrisisEvents(crisisResult.data || []);
+            } else {
+                setCrisisError(crisisResult.error);
             }
         } catch (error) {
             console.error('Error fetching tracking data:', error);
@@ -204,6 +220,21 @@ const TrackingScreen = () => {
                     <Text style={styles.noDataText}>No emotional patterns detected yet.</Text>
                 </View>
             )}
+            <View style={styles.card}>
+                <Text style={styles.cardTitle}>Crisis Events</Text>
+                {crisisError ? (
+                    <Text style={styles.errorText}>{crisisError}</Text>
+                ) : crisisEvents.length > 0 ? (
+                    crisisEvents.map((event) => (
+                        <CrisisEventCard
+                            key={event.event_ID}
+                            event={event}
+                        />
+                    ))
+                ) : (
+                    <Text style={styles.noDataText}>No crisis events recorded.</Text>
+                )}
+            </View>
         </ScrollView>
     );
 };
