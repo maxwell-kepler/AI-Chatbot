@@ -191,7 +191,7 @@ class ConversationController {
         const validTransitions = {
             'active': ['liminal', 'completed'],
             'liminal': ['active', 'completed'],
-            'completed': [] // Cannot transition out of completed
+            'completed': ['active', 'liminal']
         };
 
         return validTransitions[currentStatus]?.includes(newStatus) || false;
@@ -248,7 +248,6 @@ class ConversationController {
                 [updateData.status, updateData.end_time, conversationId]
             );
 
-            // If transitioning to completed or liminal, generate a new summary
             if (status === 'completed' || status === 'liminal') {
                 const summaryResult = await summaryService.generateSummary(conversationId);
                 if (summaryResult.success) {
