@@ -42,4 +42,4 @@ class EmotionDetectionService {
     }
 }
 
-export default new EmotionDetectionService();
+module.exports = new EmotionDetectionService();
