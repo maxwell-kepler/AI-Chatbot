@@ -99,6 +99,44 @@ class AuthService {
 
                 try {
                     const token = await tokenService.getToken();
+                    const crisisResponse = await fetch(
+                        `${API_URL}/tracking/firebase/${currentUser.uid}/crisis-events`,
+                        {
+                            headers: {
+                                Authorization: token ? `Bearer ${token}` : ''
+                            }
+                        }
+                    );
+
+                    if (crisisResponse.ok) {
+                        const { data: crisisEvents } = await crisisResponse.json();
+                        const ongoingEvents = crisisEvents.filter(event => !event.resolved_at);
+
+                        console.log(`Found ${ongoingEvents.length} ongoing crisis events to resolve`);
+
+                        await Promise.all(ongoingEvents.map(async (event) => {
+                            try {
+                                await fetch(
+                                    `${API_URL}/conversations/${event.conversation_ID}/crisis-events/${event.event_ID}/resolution`,
+                                    {
+                                        method: 'PUT',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            Authorization: token ? `Bearer ${token}` : ''
+                                        },
+                                        body: JSON.stringify({
+                                            resolutionNotes: 'Crisis event automatically resolved at session end',
+                                            actionTaken: 'Session ended with no further escalation needed'
+                                        })
+                                    }
+                                );
+                                console.log(`Resolved crisis event: ${event.event_ID}`);
+                            } catch (error) {
+                                console.error(`Error resolving crisis event ${event.event_ID}:`, error);
+                            }
+                        }));
+                    }
+
                     const response = await fetch(
                         `${API_URL}/users/firebase/${currentUser.uid}/active-conversations`,
                         {

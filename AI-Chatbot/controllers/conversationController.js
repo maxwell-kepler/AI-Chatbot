@@ -491,14 +491,14 @@ class ConversationController {
         try {
             const { conversationId, eventId } = req.params;
             const { resolutionNotes, actionTaken } = req.body;
-
+            const currentTime = formatDateForMySQL(new Date());
             const [result] = await connection.execute(
                 `UPDATE Crisis_Events 
                 SET resolution_notes = ?,
                     action_taken = ?,
-                    resolved_at = CURRENT_TIMESTAMP
+                    resolved_at = ?
                 WHERE event_ID = ? AND conversation_ID = ?`,
-                [resolutionNotes, actionTaken, eventId, conversationId]
+                [resolutionNotes, actionTaken, currentTime, eventId, conversationId]
             );
 
             if (result.affectedRows === 0) {
@@ -508,12 +508,37 @@ class ConversationController {
                 });
             }
 
+            const [unresolvedEvents] = await connection.execute(
+                `SELECT COUNT(*) as count 
+                 FROM Crisis_Events 
+                 WHERE conversation_ID = ? 
+                 AND resolved_at IS NULL`,
+                [conversationId]
+            );
+
+            if (unresolvedEvents[0].count === 0) {
+                await connection.execute(
+                    `UPDATE Conversations 
+                     SET risk_level = 'low' 
+                     WHERE conversation_ID = ?`,
+                    [conversationId]
+                );
+            }
+
+            await connection.commit();
+
             res.json({
                 success: true,
-                message: 'Crisis resolution updated successfully'
+                message: 'Crisis resolution updated successfully',
+                data: {
+                    eventId,
+                    resolvedAt: currentTime,
+                    conversationRiskLevel: unresolvedEvents[0].count === 0 ? 'low' : undefined
+                }
             });
 
         } catch (error) {
+            await connection.rollback();
             next(error);
         } finally {
             connection.release();
