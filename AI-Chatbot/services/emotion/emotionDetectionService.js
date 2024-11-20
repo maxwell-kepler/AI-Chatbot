@@ -6,8 +6,6 @@ class EmotionDetectionService {
         if (!message) return { state: ['neutral'], requiresAlert: false };
 
         const lowercaseMessage = message.toLowerCase();
-        const detectedStates = [];
-
         if (CRISIS_KEYWORDS.some(keyword => lowercaseMessage.includes(keyword))) {
             return {
                 state: ['crisis'],
@@ -15,17 +13,16 @@ class EmotionDetectionService {
             };
         }
 
+        const detectedStates = [];
         Object.entries(MOOD_PATTERNS).forEach(([category, patterns]) => {
             if (patterns.some(pattern => lowercaseMessage.includes(pattern))) {
                 detectedStates.push(category);
             }
         });
 
-        const intensity = this.analyzeIntensity(lowercaseMessage);
-
         return {
             state: detectedStates.length > 0 ? detectedStates : ['neutral'],
-            intensity,
+            intensity: this.analyzeIntensity(lowercaseMessage),
             requiresAlert: false
         };
     }
