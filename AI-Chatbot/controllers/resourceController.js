@@ -4,8 +4,9 @@ const db = require('../config/database');
 class ResourceController {
     getAllResources = async (req, res, next) => {
         try {
-            console.log('Fetching all resources');
-
+            if (process.env.NODE_ENV !== 'test') {
+                console.log('Fetching all resources');
+            }
             const [rows] = await db.execute(`
                 SELECT 
                     r.*,
@@ -25,8 +26,9 @@ class ResourceController {
                 ...resource,
                 tags: resource.tags ? resource.tags.split(',') : []
             }));
-
-            console.log(`Found ${formattedResources.length} resources`);
+            if (process.env.NODE_ENV !== 'test') {
+                console.log(`Found ${formattedResources.length} resources`);
+            }
             res.json({
                 success: true,
                 data: formattedResources
@@ -41,8 +43,9 @@ class ResourceController {
     getResourcesByCategory = async (req, res, next) => {
         try {
             const { categoryId } = req.params;
-            console.log(`Fetching resources for category: ${categoryId}`);
-
+            if (process.env.NODE_ENV !== 'test') {
+                console.log(`Fetching resources for category: ${categoryId}`);
+            }
             const [rows] = await db.execute(`
                 SELECT 
                     r.*,
@@ -76,8 +79,9 @@ class ResourceController {
     searchResources = async (req, res, next) => {
         try {
             const { query } = req.query;
-            console.log(`Searching resources with query: ${query}`);
-
+            if (process.env.NODE_ENV !== 'test') {
+                console.log(`Searching resources with query: ${query}`);
+            }
             const [rows] = await db.execute(`
                 SELECT 
                     r.*,
@@ -124,8 +128,9 @@ class ResourceController {
             `;
 
             const [resources] = await db.execute(query, [...tags, tags.length]);
-            console.log('Found resources:', resources);
-
+            if (process.env.NODE_ENV !== 'test') {
+                console.log('Found resources:', resources);
+            }
             res.json({
                 success: true,
                 data: resources

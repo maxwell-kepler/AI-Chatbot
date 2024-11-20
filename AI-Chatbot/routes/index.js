@@ -9,7 +9,9 @@ const categoryRoutes = require('./categoryRoutes');
 const trackingRoutes = require('./trackingRoutes');
 const patternRoutes = require('./patternRoutes');
 
-console.log('Mounting all routes...');
+if (process.env.NODE_ENV !== 'test') {
+    console.log('Mounting all routes...');
+}
 
 router.use('/users', userRoutes);
 router.use('/conversations', conversationRoutes);
@@ -18,6 +20,7 @@ router.use('/categories', categoryRoutes);
 router.use('/tracking', trackingRoutes);
 router.use('/patterns', patternRoutes);
 
-console.log('All routes mounted successfully');
-
+if (process.env.NODE_ENV !== 'test') {
+    console.log('All routes mounted successfully');
+}
 module.exports = router;

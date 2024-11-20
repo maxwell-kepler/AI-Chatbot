@@ -4,11 +4,13 @@ const router = express.Router();
 const trackingController = require('../controllers/trackingController');
 const patternService = require('../services/patterns/patternService');
 
-console.log('Tracking controller methods:', {
-    getEmotionalHistory: !!trackingController.getEmotionalHistory,
-    getConversationSummaries: !!trackingController.getConversationSummaries,
-    getEmotionalPatterns: !!trackingController.getEmotionalPatterns
-}, '\n');
+if (process.env.NODE_ENV !== 'test') {
+    console.log('Tracking controller methods:', {
+        getEmotionalHistory: !!trackingController.getEmotionalHistory,
+        getConversationSummaries: !!trackingController.getConversationSummaries,
+        getEmotionalPatterns: !!trackingController.getEmotionalPatterns
+    }, '\n');
+}
 
 router.get('/firebase/:firebaseId/emotional-history', trackingController.getEmotionalHistory);
 router.get('/firebase/:firebaseId/conversation-summaries', trackingController.getConversationSummaries);

@@ -17,8 +17,9 @@ class ConversationController {
 
     createConversation = async (req, res, next) => {
         const connection = await db.getConnection();
-        console.log('Create conversation request received:', req.body);
-
+        if (process.env.NODE_ENV !== 'test') {
+            console.log('Create conversation request received:', req.body);
+        }
         try {
             await connection.beginTransaction();
 
@@ -38,10 +39,12 @@ class ConversationController {
                     [firebaseId]
                 );
 
-                console.log(`User lookup attempt (${retries} retries left):`, {
-                    firebaseId,
-                    found: users.length > 0
-                });
+                if (process.env.NODE_ENV !== 'test') {
+                    console.log(`User lookup attempt (${retries} retries left):`, {
+                        firebaseId,
+                        found: users.length > 0
+                    });
+                }
 
                 if (users.length > 0) break;
 
@@ -63,12 +66,13 @@ class ConversationController {
 
             const mysqlUserId = users[0].user_ID;
             const formattedStartTime = formatDateForMySQL(startTime || new Date());
-
-            console.log('Creating conversation with:', {
-                mysqlUserId,
-                status,
-                startTime: formattedStartTime
-            });
+            if (process.env.NODE_ENV !== 'test') {
+                console.log('Creating conversation with:', {
+                    mysqlUserId,
+                    status,
+                    startTime: formattedStartTime
+                });
+            }
 
             const [result] = await connection.execute(
                 'INSERT INTO Conversations (user_ID, status, start_time) VALUES (?, ?, ?)',
@@ -82,8 +86,9 @@ class ConversationController {
                 message: 'Conversation created successfully',
                 conversationId: result.insertId
             };
-
-            console.log('Conversation created successfully:', response);
+            if (process.env.NODE_ENV !== 'test') {
+                console.log('Conversation created successfully:', response);
+            }
             res.status(201).json(response);
 
         } catch (error) {
@@ -105,12 +110,21 @@ class ConversationController {
             const { conversationId } = req.params;
             const { content, senderType, emotionalState, timestamp } = req.body;
 
-            console.log('Adding message with emotional state:', {
-                conversationId,
-                senderType,
-                emotionalState,
-                timestamp
-            });
+            if (!content || content.trim().length === 0) {
+                await connection.rollback();
+                return res.status(500).json({
+                    success: false,
+                    error: 'Message content cannot be empty'
+                });
+            }
+            if (process.env.NODE_ENV !== 'test') {
+                console.log('Adding message with emotional state:', {
+                    conversationId,
+                    senderType,
+                    emotionalState,
+                    timestamp
+                });
+            }
 
             // Get user ID for the conversation first
             const [conversations] = await connection.execute(
@@ -123,8 +137,9 @@ class ConversationController {
             }
 
             const userId = conversations[0].user_ID;
-            console.log('Found user ID:', userId);
-
+            if (process.env.NODE_ENV !== 'test') {
+                console.log('Found user ID:', userId);
+            }
             // Add the message
             const [result] = await connection.execute(
                 `INSERT INTO Messages 
@@ -141,14 +156,18 @@ class ConversationController {
 
             // Only record patterns for user messages with emotional state
             if (senderType === 'user' && emotionalState) {
-                console.log('Recording emotional pattern for user:', userId);
+                if (process.env.NODE_ENV !== 'test') {
+                    console.log('Recording emotional pattern for user:', userId);
+                }
                 try {
                     await patternService.recordEmotionalState(
                         userId,
                         emotionalState,
                         content
                     );
-                    console.log('Successfully recorded emotional pattern');
+                    if (process.env.NODE_ENV !== 'test') {
+                        console.log('Successfully recorded emotional pattern');
+                    }
                 } catch (patternError) {
                     console.error('Error recording pattern:', patternError);
                 }
@@ -168,8 +187,9 @@ class ConversationController {
                     timestamp: formatDateForMySQL(timestamp || new Date())
                 }
             };
-
-            console.log('Message successfully added:', response);
+            if (process.env.NODE_ENV !== 'test') {
+                console.log('Message successfully added:', response);
+            }
             res.status(201).json(response);
 
         } catch (error) {
