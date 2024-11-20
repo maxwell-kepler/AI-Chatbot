@@ -35,7 +35,8 @@ CREATE TABLE Resources (
     hours VARCHAR(100),
     category_ID INT,
     FOREIGN KEY (category_ID) REFERENCES Categories(category_ID),
-    INDEX idx_resources_category (category_ID)
+    INDEX idx_resources_category (category_ID),
+	FULLTEXT INDEX idx_resource_search (name, description)
 );
 
 CREATE TABLE Used_In (
@@ -68,7 +69,10 @@ CREATE TABLE Accessed_By (
     referral_source ENUM('chat', 'search', 'category_browse', 'crisis'),
     PRIMARY KEY (user_ID, resource_ID, access_time),
     FOREIGN KEY (user_ID) REFERENCES Users(user_ID),
-    FOREIGN KEY (resource_ID) REFERENCES Resources(resource_ID)
+    FOREIGN KEY (resource_ID) REFERENCES Resources(resource_ID),
+    INDEX idx_access_patterns (user_ID, access_time),
+	INDEX idx_resource_access (resource_ID, access_time),
+	INDEX idx_referral_tracking (referral_source, access_time)
 );
 
 CREATE TABLE Conversations (
@@ -81,7 +85,11 @@ CREATE TABLE Conversations (
     last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_ID) REFERENCES Users(user_ID),
     INDEX idx_status_last_activity (status, last_activity),
-    INDEX idx_conversations_user (user_ID)
+    INDEX idx_conversations_user (user_ID), 
+    INDEX idx_user_end_time (user_ID, end_time),
+	INDEX idx_status_user (status, user_ID),
+	INDEX idx_risk_level (risk_level),
+	INDEX idx_conversation_activity (user_ID, last_activity)
 );
 
 CREATE TABLE Messages (
@@ -92,7 +100,9 @@ CREATE TABLE Messages (
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     emotional_state JSON,
     FOREIGN KEY (conversation_ID) REFERENCES Conversations(conversation_ID),
-    INDEX idx_conversation_timestamp (conversation_ID, timestamp)
+    INDEX idx_message_sender (conversation_ID, sender_type),
+	INDEX idx_message_timeline (conversation_ID, timestamp),
+	INDEX idx_emotional_state ((cast(emotional_state as char(100))))
 );
 
 CREATE TABLE Crisis_Events (
@@ -106,7 +116,10 @@ CREATE TABLE Crisis_Events (
     resolved_at TIMESTAMP,
     FOREIGN KEY (conversation_ID) REFERENCES Conversations(conversation_ID),
     FOREIGN KEY (user_ID) REFERENCES Users(user_ID),
-    INDEX idx_crisis_user (user_ID)
+    INDEX idx_crisis_user (user_ID),
+    INDEX idx_crisis_timeline (user_ID, timestamp),
+	INDEX idx_crisis_severity (severity_level),
+	INDEX idx_crisis_resolution (resolved_at)
 );
 
 CREATE TABLE Emotional_Patterns (
@@ -119,7 +132,9 @@ CREATE TABLE Emotional_Patterns (
     confidence_score DECIMAL(5,2),
     user_ID VARCHAR(128),
     FOREIGN KEY (user_ID) REFERENCES Users(user_ID),
-    INDEX idx_emotional_patterns_user (user_ID)
+    INDEX idx_emotional_patterns_user (user_ID),
+    INDEX idx_pattern_detection (user_ID, pattern_type, last_detected),
+	INDEX idx_pattern_frequency (user_ID, occurrence_count DESC)
 );
 
 CREATE TABLE Conversation_Summaries (
@@ -132,7 +147,10 @@ CREATE TABLE Conversation_Summaries (
     recommendations JSON,
     raw_summary TEXT,
     FOREIGN KEY (conversation_ID) REFERENCES Conversations(conversation_ID) ON DELETE CASCADE,
-    INDEX idx_conversation (conversation_ID)
+    INDEX idx_conversation (conversation_ID),
+    INDEX idx_summary_created (created_at),
+	INDEX idx_summary_conversation_time (conversation_ID, created_at),
+	INDEX idx_latest_summary (conversation_ID, created_at DESC)
 );
 
 SHOW TABLES;

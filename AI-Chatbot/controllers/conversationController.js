@@ -2,6 +2,7 @@
 const db = require('../config/database');
 const { formatDateForMySQL } = require('../utils/dateFormatter');
 const summaryService = require('../services/summary/summaryService');
+const patternService = require('../services/patterns/patternService');
 const { parseSummary } = require('../utils/summaryParser');
 
 class ConversationController {
@@ -104,21 +105,16 @@ class ConversationController {
             const { conversationId } = req.params;
             const { content, senderType, emotionalState, timestamp } = req.body;
 
-            console.log('Adding message to conversation:', {
+            console.log('Adding message with emotional state:', {
                 conversationId,
                 senderType,
-                contentLength: content?.length,
-                hasEmotionalState: !!emotionalState
+                emotionalState,
+                timestamp
             });
 
-            // Input validation
-            if (!content || !senderType) {
-                throw new Error('Content and senderType are required');
-            }
-
-            // Verify conversation exists
+            // Get user ID for the conversation first
             const [conversations] = await connection.execute(
-                'SELECT conversation_ID FROM Conversations WHERE conversation_ID = ?',
+                'SELECT user_ID FROM Conversations WHERE conversation_ID = ?',
                 [conversationId]
             );
 
@@ -126,56 +122,59 @@ class ConversationController {
                 throw new Error(`Conversation ${conversationId} not found`);
             }
 
-            const formattedTimestamp = formatDateForMySQL(timestamp || new Date());
+            const userId = conversations[0].user_ID;
+            console.log('Found user ID:', userId);
 
-            try {
-                const [result] = await connection.execute(
-                    `INSERT INTO Messages 
-                    (conversation_ID, content, sender_type, emotional_state, timestamp) 
-                    VALUES (?, ?, ?, ?, ?)`,
-                    [
-                        conversationId,
-                        content,
-                        senderType,
-                        emotionalState ? JSON.stringify(emotionalState) : null,
-                        formattedTimestamp
-                    ]
-                );
+            // Add the message
+            const [result] = await connection.execute(
+                `INSERT INTO Messages 
+                (conversation_ID, content, sender_type, emotional_state, timestamp) 
+                VALUES (?, ?, ?, ?, ?)`,
+                [
+                    conversationId,
+                    content,
+                    senderType,
+                    emotionalState ? JSON.stringify(emotionalState) : null,
+                    formatDateForMySQL(timestamp || new Date())
+                ]
+            );
 
-                await connection.commit();
-
-                const response = {
-                    success: true,
-                    message: 'Message added successfully',
-                    data: {
-                        messageId: result.insertId,
-                        conversationId,
-                        content,
-                        senderType,
+            // Only record patterns for user messages with emotional state
+            if (senderType === 'user' && emotionalState) {
+                console.log('Recording emotional pattern for user:', userId);
+                try {
+                    await patternService.recordEmotionalState(
+                        userId,
                         emotionalState,
-                        timestamp: formattedTimestamp
-                    }
-                };
-
-                console.log('Message added successfully:', {
-                    messageId: result.insertId,
-                    conversationId
-                });
-
-                res.status(201).json(response);
-
-            } catch (dbError) {
-                if (process.env.NODE_ENV !== 'test') {
-                    console.error('Database error while adding message:', dbError);
+                        content
+                    );
+                    console.log('Successfully recorded emotional pattern');
+                } catch (patternError) {
+                    console.error('Error recording pattern:', patternError);
                 }
-                throw new Error(`Failed to add message: ${dbError.message}`);
             }
+
+            await connection.commit();
+
+            const response = {
+                success: true,
+                message: 'Message added successfully',
+                data: {
+                    messageId: result.insertId,
+                    conversationId,
+                    content,
+                    senderType,
+                    emotionalState,
+                    timestamp: formatDateForMySQL(timestamp || new Date())
+                }
+            };
+
+            console.log('Message successfully added:', response);
+            res.status(201).json(response);
 
         } catch (error) {
             await connection.rollback();
-            if (process.env.NODE_ENV !== 'test') {
-                console.error('Error processing addMessage:', error);
-            }
+            console.error('Error in addMessage:', error);
             next(error);
         } finally {
             connection.release();

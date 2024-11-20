@@ -146,4 +146,9 @@ export default StyleSheet.create({
         color: theme.colors.neutral.grey800,
         lineHeight: 20,
     },
+    cardSubtitle: {
+        ...theme.typography.presets.body2,
+        color: theme.colors.neutral.grey600,
+        marginBottom: theme.spacing.lg,
+    },
 });

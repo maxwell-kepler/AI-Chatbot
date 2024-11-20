@@ -148,7 +148,8 @@ const conversationService = {
                 conversationId,
                 senderType,
                 hasContent: !!content,
-                hasEmotionalState: !!emotionalState
+                hasEmotionalState: !!emotionalState,
+                emotionalState
             });
 
             const response = await fetch(
@@ -190,6 +191,17 @@ const conversationService = {
 
     recordCrisisEvent: async (conversationId, userId, severityLevel, notes) => {
         try {
+            if (!conversationId) {
+                throw new Error('Conversation ID is required for crisis event recording');
+            }
+
+            console.log('Recording crisis event:', {
+                conversationId,
+                userId,
+                severityLevel,
+                hasNotes: !!notes
+            });
+
             const response = await fetch(`${API_URL}/conversations/${conversationId}/crisis-events`, {
                 method: 'POST',
                 headers: {
@@ -200,7 +212,7 @@ const conversationService = {
                     severityLevel,
                     notes,
                     timestamp: new Date().toISOString(),
-                    actionTaken: 'Crisis resources provided', // Default action
+                    actionTaken: 'Crisis resources provided and risk level elevated'
                 })
             });
 
@@ -210,6 +222,8 @@ const conversationService = {
             }
 
             const data = await response.json();
+            console.log('Crisis event recorded successfully:', data);
+
             return {
                 success: true,
                 data: data.data
