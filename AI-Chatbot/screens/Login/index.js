@@ -1,5 +1,5 @@
 // screens/Login/index.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -10,6 +10,7 @@ import {
 import Button, { BUTTON_VARIANTS, BUTTON_SIZES } from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import authService from '../../services/auth/authService';
+import tokenService from '../../services/auth/tokenService';
 import styles from './styles';
 import { Mail, Lock } from 'lucide-react-native';
 import { theme } from '../../styles/theme';
@@ -55,6 +56,14 @@ const Login = () => {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({});
+
+    useEffect(() => {
+        tokenService.setIsLoginPage(true);
+
+        return () => {
+            tokenService.setIsLoginPage(false);
+        };
+    }, []);
 
     const validateForm = () => {
         const newErrors = {};

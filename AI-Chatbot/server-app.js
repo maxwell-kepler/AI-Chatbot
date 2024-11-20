@@ -16,8 +16,12 @@ app.use(express.json());
 
 // Request logging
 app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    console.log('Request body:', req.body);
+    if (process.env.NODE_ENV !== 'test') {
+        console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    }
+    if (process.env.NODE_ENV !== 'test') {
+        console.log('Request body:', req.body);
+    }
     next();
 });
 
@@ -26,7 +30,9 @@ app.use('/api', routes);
 
 // 404 handler
 app.use((req, res) => {
-    console.log('404 Not Found:', req.url);
+    if (process.env.NODE_ENV !== 'test') {
+        console.log('404 Not Found:', req.url);
+    }
     res.status(404).json({
         success: false,
         error: `Route not found: ${req.url}`

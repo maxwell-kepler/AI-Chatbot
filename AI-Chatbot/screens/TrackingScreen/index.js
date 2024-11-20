@@ -14,6 +14,8 @@ import { trackingService } from '../../services/database/trackingService';
 import styles from './styles';
 import ConversationSummaryCard from '../../components/specific/Tracking/ConversationSummaryCard';
 import CrisisEventCard from '../../components/specific/Tracking/CrisisEventCard';
+import { API_URL } from '../../config/api.client';
+import EmotionalPatternCard from '../../components/specific/Tracking/EmotionalPatternCard';
 
 const TrackingScreen = () => {
     const { user, loading: authLoading } = useAuth();
@@ -25,6 +27,34 @@ const TrackingScreen = () => {
     const [error, setError] = useState(null);
     const [crisisEvents, setCrisisEvents] = useState([]);
     const [crisisError, setCrisisError] = useState(null);
+    const [patternsLoading, setPatternsLoading] = useState(true);
+
+    const fetchPatterns = async () => {
+        try {
+            const response = await fetch(
+                `${API_URL}/tracking/firebase/${user.uid}/emotional-patterns`
+            );
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch patterns');
+            }
+
+            const data = await response.json();
+            setPatterns(data.data);
+        } catch (error) {
+            console.error('Error fetching patterns:', error);
+            setError('Failed to load emotional patterns');
+        } finally {
+            setPatternsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!authLoading && user) {
+            fetchData();
+            fetchPatterns();
+        }
+    }, [authLoading, user]);
 
     const fetchData = async () => {
         if (!user) {
@@ -204,20 +234,23 @@ const TrackingScreen = () => {
             {patterns.length > 0 ? (
                 <View style={styles.card}>
                     <Text style={styles.cardTitle}>Emotional Patterns</Text>
+                    <Text style={styles.cardSubtitle}>
+                        Patterns detected in your conversations
+                    </Text>
                     {patterns.map((pattern, index) => (
-                        <View key={index} style={styles.patternItem}>
-                            <Text style={styles.patternType}>{pattern.pattern_type}</Text>
-                            <Text style={styles.patternValue}>{pattern.pattern_value}</Text>
-                            <Text style={styles.patternStats}>
-                                Occurred {pattern.occurrence_count} times
-                                (Confidence: {Math.round(pattern.confidence_score)}%)
-                            </Text>
-                        </View>
+                        <EmotionalPatternCard
+                            key={`pattern-${index}`}
+                            pattern={pattern}
+                        />
                     ))}
                 </View>
-            ) : (
+            ) : !patternsLoading && (
                 <View style={styles.card}>
-                    <Text style={styles.noDataText}>No emotional patterns detected yet.</Text>
+                    <Text style={styles.cardTitle}>Emotional Patterns</Text>
+                    <Text style={styles.noDataText}>
+                        No significant patterns detected yet. Continue having conversations
+                        to help identify patterns in your emotional state.
+                    </Text>
                 </View>
             )}
             <View style={styles.card}>

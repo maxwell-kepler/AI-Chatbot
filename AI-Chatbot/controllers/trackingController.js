@@ -168,50 +168,51 @@ class TrackingController {
             `;
 
             const [summaries] = await db.execute(query, [userId]);
-
             console.log(`Found ${summaries.length} unique conversations`);
 
             const processedSummaries = summaries
                 .filter(summary => summary.raw_summary)
                 .map(summary => {
-                    const safeParseJSON = (field, fieldName) => {
-                        if (!field || field === '') return [];
+                    const parseSectionFromRaw = (rawSummary, sectionTitle) => {
                         try {
-                            const parsed = JSON.parse(field);
-                            return Array.isArray(parsed) ? parsed : [parsed];
+                            const sectionRegex = new RegExp(`${sectionTitle}[\\s\\S]*?(\\n\\n|$)`);
+                            const section = rawSummary.match(sectionRegex)?.[0] || '';
+
+                            return section
+                                .split('\n')
+                                .filter(line => line.trim().startsWith('-') || line.trim().startsWith('•'))
+                                .map(line => line.replace(/^[•\-]\s*/, '').trim())
+                                .filter(line => line.length > 0);
                         } catch (e) {
-                            console.log(`Error parsing ${fieldName}, will use raw summary parsing instead`);
+                            console.error(`Error parsing section ${sectionTitle}:`, e);
                             return [];
                         }
                     };
 
-                    let processed = {
+                    const rawSummary = summary.raw_summary?.toString() || '';
+                    const emotions = parseSectionFromRaw(rawSummary, 'Key Emotions:');
+                    const mainConcerns = parseSectionFromRaw(rawSummary, 'Main Concerns:');
+                    const progressNotes = parseSectionFromRaw(rawSummary, 'Progress Made:');
+                    const recommendations = parseSectionFromRaw(rawSummary, 'Recommendations:');
+
+                    console.log('Parsed sections:', {
+                        emotionsCount: emotions.length,
+                        mainConcernsCount: mainConcerns.length,
+                        progressNotesCount: progressNotes.length,
+                        recommendationsCount: recommendations.length
+                    });
+
+                    return {
                         conversation_ID: summary.conversation_ID,
                         start_time: summary.start_time,
                         end_time: summary.end_time,
                         risk_level: summary.risk_level,
-                        emotions: safeParseJSON(summary.emotions, 'emotions'),
-                        main_concerns: safeParseJSON(summary.main_concerns, 'main_concerns'),
-                        progress_notes: safeParseJSON(summary.progress_notes, 'progress_notes'),
-                        recommendations: safeParseJSON(summary.recommendations, 'recommendations'),
-                        raw_summary: summary.raw_summary || 'No summary available'
+                        emotions: emotions,
+                        main_concerns: mainConcerns,
+                        progress_notes: progressNotes,
+                        recommendations: recommendations,
+                        raw_summary: rawSummary
                     };
-
-                    if (processed.emotions.length === 0 &&
-                        processed.main_concerns.length === 0 &&
-                        processed.progress_notes.length === 0 &&
-                        processed.recommendations.length === 0) {
-
-                        const parsedRawSummary = this.parseRawSummary(summary.raw_summary);
-                        if (parsedRawSummary) {
-                            processed = {
-                                ...processed,
-                                ...parsedRawSummary
-                            };
-                        }
-                    }
-
-                    return processed;
                 });
 
             console.log(`Processed ${processedSummaries.length} summaries`);

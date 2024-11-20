@@ -14,6 +14,7 @@ export default StyleSheet.create({
         borderColor: theme.colors.primary.main,
         marginRight: theme.spacing.sm,
         height: "80%", // Fixed height instead of percentage
+        maxWidth: 180,
     },
     icon: {
         marginRight: theme.spacing.xs,

@@ -184,11 +184,6 @@ class UserController {
             );
 
             await connection.execute(
-                'DELETE FROM Moods WHERE user_ID = ?',
-                [userId]
-            );
-
-            await connection.execute(
                 'DELETE FROM Crisis_Events WHERE user_ID = ?',
                 [userId]
             );

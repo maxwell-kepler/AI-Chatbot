@@ -11,7 +11,7 @@ import {
 import { auth } from '../../config/firebase';
 import { userService } from '../database/userService';
 import { API_URL } from "../../config/api.client";
-import { conversationService } from '../database/conversationService';
+import tokenService from './tokenService';
 
 class AuthService {
     async createAccount(email, password) {
@@ -62,6 +62,9 @@ class AuthService {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const firebaseUser = userCredential.user;
 
+            const token = await firebaseUser.getIdToken();
+            await tokenService.setToken(token);
+
             const response = await fetch(`${API_URL}/users/firebase/${firebaseUser.uid}/login`, {
                 method: 'PUT',
                 headers: {
@@ -78,7 +81,6 @@ class AuthService {
                 success: true,
                 user: firebaseUser
             };
-
         } catch (error) {
             console.log('Sign in attempt failed:', error.code);
             return {
@@ -93,39 +95,51 @@ class AuthService {
         try {
             const currentUser = auth.currentUser;
             if (currentUser) {
-                const response = await fetch(
-                    `${API_URL}/users/firebase/${currentUser.uid}/active-conversations`
-                );
+                tokenService.clearTimers();
 
-                if (response.ok) {
-                    const { conversations } = await response.json();
-
-                    await Promise.all(conversations.map(async (conv) => {
-                        try {
-                            const summaryResult = await conversationService.generateConversationSummary(
-                                conv.conversation_ID
-                            );
-
-                            if (summaryResult.success) {
-                                await conversationService.updateConversationStatus(
-                                    conv.conversation_ID,
-                                    'completed',
-                                    summaryResult.summary
-                                );
+                try {
+                    const token = await tokenService.getToken();
+                    const response = await fetch(
+                        `${API_URL}/users/firebase/${currentUser.uid}/active-conversations`,
+                        {
+                            headers: {
+                                Authorization: token ? `Bearer ${token}` : ''
                             }
-                        } catch (error) {
-                            console.error(`Error completing conversation ${conv.conversation_ID}:`, error);
                         }
-                    }));
+                    );
+
+                    if (response.ok) {
+                        const { conversations } = await response.json();
+                        await Promise.all(conversations.map(async (conv) => {
+                            console.log('Handling conversation:', conv.conversation_ID);
+                        }));
+                    }
+                } catch (error) {
+                    console.warn('Error handling active conversations:', error);
                 }
 
                 await userService.updateLastLogin(currentUser.uid);
             }
-            return auth.signOut();
+
+            await tokenService.clearToken();
+            await auth.signOut();
         } catch (error) {
             console.error('Error during sign out:', error);
             throw error;
         }
+    }
+
+    startTokenRefreshMonitor() {
+        setInterval(async () => {
+            try {
+                const tokenRefreshed = await tokenService.refreshTokenIfNeeded();
+                if (tokenRefreshed) {
+                    console.log('Token refreshed due to expiry approaching');
+                }
+            } catch (error) {
+                console.error('Error in token refresh monitor:', error);
+            }
+        }, 60 * 1000);
     }
 
     async forgotPassword(email) {
@@ -253,5 +267,5 @@ class AuthService {
         }
     }
 }
-
-export default new AuthService();
+const authService = new AuthService();
+export default authService;

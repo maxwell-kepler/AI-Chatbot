@@ -28,18 +28,38 @@ export const MOOD_PATTERNS = {
     practical: ['financial help', 'housing support', 'food bank', 'employment']
 };
 
+export const CRISIS_RESPONSES = {
+    selfHarm: `I hear that you're having thoughts of hurting yourself, and I want you to know that this is a serious concern. Your life has value, and there are people who want to help.
 
-export const CRISIS_RESOURCES = `IMPORTANT: If you're having thoughts of self-harm or suicide, please reach out for immediate help:
+IMMEDIATE SUPPORT AVAILABLE:
+• Distress Centre Calgary: 403-266-4357 - Available 24/7
+• Emergency Services: [911](tel:911) - If you're in immediate danger
+• Canada Suicide Prevention Service: 1-833-456-4566
 
-Distress Centre Calgary: 403-266-4357
-Emergency Services: [911](tel:911)
+Would you like me to:
+1. Stay on the line with you while you call one of these numbers?
+2. Help you create a safety plan?
+3. Connect you with local mental health resources?
 
-Local Support Services in Calgary:
-- Access Mental Health (Referrals): 403-943-1500
-- Calgary Counselling Centre: 403-691-5991
-- Woods Homes (Youth): 403-299-9699
+You don't have to go through this alone.`,
 
-There are people here in Calgary who want to help. You're not alone.`;
+    suicidalThoughts: `I'm very concerned about what you're sharing, and I want you to know that your life matters. These feelings are serious, but help is available right now.
+
+IMMEDIATE HELP:
+• Distress Centre Calgary: 403-266-4357 - 24/7 Crisis Line
+• Emergency Services: [911](tel:911)
+• Mobile Response Team: 403-266-4357
+
+Please reach out to one of these services - they are trained professionals who want to help. Would you like me to stay with you while you make the call?`,
+
+    generalCrisis: `I understand you're going through a really difficult time right now. While I'm an AI and can't provide direct intervention, there are professional services in Calgary ready to help:
+
+• Distress Centre: 403-266-4357
+• Access Mental Health: 403-943-1500
+• Woods Homes (Youth): 403-299-9699
+
+Would you like information about any of these services?`
+};
 
 export const WELCOME_MESSAGE = `Hi there! 👋 I'm your mental health support companion. I'm here to:
 
@@ -108,5 +128,6 @@ export const CRISIS_PROMPT = `URGENT: User may be in crisis. Key priorities:
 
 export const CRISIS_KEYWORDS = [
     'suicide', 'kill myself', 'end my life', 'self-harm',
-    'hurt myself', 'don\'t want to live', 'better off dead'
+    'hurt myself', 'don\'t want to live', 'better off dead',
+    'die', 'self harm', 'cut myself', 'overdose', 'pills'
 ];

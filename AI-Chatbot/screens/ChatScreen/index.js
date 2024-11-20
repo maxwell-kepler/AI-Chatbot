@@ -16,12 +16,13 @@ import { useFocusEffect } from '@react-navigation/native';
 import { theme } from '../../styles/theme';
 import ChatBubble from '../../components/specific/Chat/ChatBubble';
 import MessageInput from '../../components/specific/Chat/MessageInput';
-import { chatWithGemini } from '../../services/gemini/geminiService';
+import { chatWithGemini, performSafetyCheck } from '../../services/gemini/geminiService';
 import { conversationService } from '../../services/database/conversationService';
 import { resourceMatchingService } from '../../services/matching/resourceMatchingService';
 import LoadingScreen from '../LoadingScreen';
 import styles from './styles';
 import { WELCOME_MESSAGE, CRISIS_RESOURCES } from '../../config/promptConfig';
+import emotionDetectionService from '../../services/emotion/emotionDetectionService';
 
 const ChatScreen = () => {
     const { user, loading: authLoading } = useAuth();
@@ -159,8 +160,6 @@ const ChatScreen = () => {
         }, 300000); // 5 minutes timeout, 300000 ms
     };
 
-
-
     const scrollToBottom = (animated = true) => {
         if (scrollViewRef.current) {
             setTimeout(() => {
@@ -172,26 +171,56 @@ const ChatScreen = () => {
     const handleSend = async (message) => {
         try {
             let currentConversationId = conversationId;
+            const safetyCheck = performSafetyCheck(message);
 
             if (!currentConversationId) {
-                currentConversationId = await initializeConversation();
-                if (!currentConversationId) return;
+                console.log('Initializing new conversation');
+                const result = await conversationService.createConversation(user.uid);
+
+                if (!result.success) {
+                    throw new Error('Failed to create conversation');
+                }
+
+                currentConversationId = result.conversationId;
+                setConversationId(currentConversationId);
 
                 await conversationService.addMessage(
                     currentConversationId,
                     WELCOME_MESSAGE,
                     'ai'
                 );
-
-                setConversationId(currentConversationId);
             }
+
+            if (safetyCheck.isCritical && currentConversationId) {
+                console.log('Recording crisis event for conversation:', currentConversationId);
+
+                try {
+                    await conversationService.recordCrisisEvent(
+                        currentConversationId,
+                        user.uid,
+                        'severe',
+                        'User expressed thoughts of self-harm or suicide'
+                    );
+                    console.log('Crisis event recorded successfully');
+
+                    await conversationService.updateRiskLevel(
+                        currentConversationId,
+                        'high'
+                    );
+                    console.log('Risk level updated successfully');
+                } catch (crisisError) {
+                    console.error('Error handling crisis event:', crisisError);
+                }
+            }
+
+            const emotionalState = emotionDetectionService.detectEmotionalState(message);
+            console.log('Detected emotional state:', emotionalState);
 
             const newMessage = {
                 text: message,
                 isUser: true,
                 timestamp: new Date(),
             };
-
             setMessages(prev => [...prev, newMessage]);
             setLoading(true);
             scrollToBottom();
@@ -200,77 +229,89 @@ const ChatScreen = () => {
                 await conversationService.addMessage(
                     currentConversationId,
                     message,
-                    'user'
-                );
-
-                const response = await chatWithGemini(message);
-                const { text, isCrisis, emotionalState, insights } = response;
-
-                const shouldRecommendResources = emotionalState.state.some(state =>
-                    ['anxiety', 'depression', 'stress'].includes(state)) ||
-                    message.toLowerCase().includes('help') ||
-                    message.toLowerCase().includes('resource') ||
-                    message.toLowerCase().includes('support');
-
-                if (shouldRecommendResources) {
-                    const matchedResources = await resourceMatchingService.getMatchingResources(
-                        'moderate',
-                        emotionalState,
-                        message
-                    );
-                    if (matchedResources.success && matchedResources.data.length > 0) {
-                        const resourceMessage = formatResourceRecommendations(matchedResources.data);
-                        setMessages(prev => [...prev, {
-                            text: "Based on what you're sharing, these resources might be helpful:",
-                            isUser: false,
-                            timestamp: new Date()
-                        }, {
-                            text: resourceMessage,
-                            isUser: false,
-                            timestamp: new Date(),
-                            isResourceRecommendation: true
-                        }]);
-
-                        matchedResources.data.forEach(resource => {
-                            resourceMatchingService.recordResourceAccess(
-                                user.uid,
-                                resource.resource_ID,
-                                'chat'
-                            );
-                        });
-                    }
-                }
-
-                await conversationService.addMessage(
-                    currentConversationId,
-                    text,
-                    'ai',
+                    'user',
                     emotionalState
                 );
 
-                const aiResponse = {
-                    text,
-                    isUser: false,
-                    timestamp: new Date(),
-                };
+                const response = await chatWithGemini(message);
+                const { text, isCrisis, insights } = response;
 
-                setMessages(prev => [...prev, aiResponse]);
+                const severity = safetyCheck.isCritical ? 'severe' : 'moderate';
+                const matchedResources = await resourceMatchingService.getMatchingResources(
+                    severity,
+                    emotionalState,
+                    message
+                );
 
-                if (isCrisis) {
-                    await handleCrisisSituation(message, emotionalState, currentConversationId);
+                if (matchedResources.success && matchedResources.data.length > 0) {
+                    const aiResponse = {
+                        text,
+                        isUser: false,
+                        timestamp: new Date(),
+                    };
+                    setMessages(prev => [...prev, aiResponse]);
+
+                    setMessages(prev => [...prev, {
+                        text: "Here are some resources that might help:",
+                        isUser: false,
+                        timestamp: new Date()
+                    }, {
+                        text: formatResourceRecommendations(matchedResources.data),
+                        isUser: false,
+                        timestamp: new Date(),
+                        isResourceRecommendation: true
+                    }]);
+
+                    await conversationService.addMessage(
+                        currentConversationId,
+                        text,
+                        'ai',
+                        response.emotionalState
+                    );
+                } else {
+                    const aiResponse = {
+                        text,
+                        isUser: false,
+                        timestamp: new Date(),
+                    };
+                    setMessages(prev => [...prev, aiResponse]);
+
+                    await conversationService.addMessage(
+                        currentConversationId,
+                        text,
+                        'ai',
+                        response.emotionalState
+                    );
                 }
 
-                await updateRiskLevel(emotionalState, insights, currentConversationId);
+                if (!safetyCheck.isCritical) {
+                    await updateRiskLevel(emotionalState, insights, currentConversationId);
+                }
 
             } catch (error) {
                 console.error('Chat error:', error);
-                const errorMessage = {
-                    text: "I'm sorry, I couldn't process your message. Please try again.",
-                    isUser: false,
-                    timestamp: new Date(),
-                    isError: true,
-                };
-                setMessages(prev => [...prev, errorMessage]);
+                if (safetyCheck.isCritical) {
+                    setMessages(prev => [...prev, {
+                        text: CRISIS_RESPONSES.generalCrisis,
+                        isUser: false,
+                        timestamp: new Date(),
+                        isCrisisAlert: true
+                    }]);
+
+                    await conversationService.addMessage(
+                        currentConversationId,
+                        CRISIS_RESPONSES.generalCrisis,
+                        'ai',
+                        { state: ['crisis'], requiresAlert: true }
+                    );
+                } else {
+                    setMessages(prev => [...prev, {
+                        text: "I'm sorry, I couldn't process your message. Please try again.",
+                        isUser: false,
+                        timestamp: new Date(),
+                        isError: true,
+                    }]);
+                }
             }
 
         } catch (error) {

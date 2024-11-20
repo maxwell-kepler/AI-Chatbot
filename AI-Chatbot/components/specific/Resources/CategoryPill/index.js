@@ -1,6 +1,5 @@
 // components/specific/Resources/CategoryPill/index.js
 import React from 'react';
-import { TouchableOpacity, Text } from 'react-native';
 import {
     AlertCircle,
     MessageCircle,
@@ -9,6 +8,7 @@ import {
     HelpCircle,
     Smile
 } from 'lucide-react-native';
+import Card from '../../../common/Card';
 import { theme } from '../../../../styles/theme';
 import styles from './styles';
 
@@ -27,28 +27,27 @@ const CategoryPill = ({ category, isSelected, onSelect }) => {
     const IconComponent = IconMap[category.icon];
 
     return (
-        <TouchableOpacity
+        <Card
+            title={category.name}
             style={[
                 styles.container,
                 isSelected && styles.selected,
             ]}
             onPress={() => onSelect(category.id)}
-        >
-            {IconComponent && (
-                <IconComponent
-                    size={16}
-                    color={isSelected ? theme.colors.primary.contrast : theme.colors.primary.main}
-                    style={styles.icon}
-                />
-            )}
-            <Text style={[
-                styles.text,
-                isSelected && styles.selectedText,
-            ]}>
-                {category.name}
-            </Text>
-        </TouchableOpacity>
+            leftIcon={
+                IconComponent && (
+                    <IconComponent
+                        size={16}
+                        color={isSelected ? theme.colors.primary.contrast : theme.colors.primary.main}
+                        style={{ marginRight: 4 }}
+                    />
+                )
+            }
+            titleStyle={[
+                { color: theme.colors.primary.main },
+                isSelected && { color: theme.colors.primary.contrast }
+            ]}
+        />
     );
 };
-
 export default CategoryPill;
