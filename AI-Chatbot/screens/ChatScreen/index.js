@@ -147,12 +147,15 @@ const ChatScreen = () => {
                 );
 
                 if (summaryResult.success) {
-                    await conversationService.updateConversationStatus(
+                    const result = await conversationService.updateConversationStatus(
                         conversationId,
-                        'completed',
-                        summaryResult.summary
+                        'completed'
                     );
-                    setCurrentStatus('completed');
+                    if (result.success) {
+                        setCurrentStatus('completed');
+                    } else {
+                        console.error('Failed to complete conversation:', result.error);
+                    }
                 }
             } catch (error) {
                 console.error('Error completing conversation:', error);

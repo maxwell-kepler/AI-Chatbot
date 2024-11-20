@@ -232,7 +232,7 @@ class ConversationController {
 
             // Get current conversation state
             const [conversations] = await connection.execute(
-                'SELECT status FROM Conversations WHERE conversation_ID = ?',
+                'SELECT status, end_time FROM Conversations WHERE conversation_ID = ?',
                 [conversationId]
             );
 
@@ -256,18 +256,16 @@ class ConversationController {
                 throw new Error(`Invalid status transition from ${currentStatus} to ${status}`);
             }
 
-            // Update conversation
-            const updateData = {
-                status,
-                end_time: status === 'completed' ? formatDateForMySQL(new Date()) : null
-            };
+            // Special handling for completion
+            if (status === 'completed') {
+                // Ensure end_time is set
+                const currentTime = new Date();
+                await connection.execute(
+                    'UPDATE Conversations SET status = ?, end_time = ? WHERE conversation_ID = ?',
+                    [status, formatDateForMySQL(currentTime), conversationId]
+                );
 
-            await connection.execute(
-                'UPDATE Conversations SET status = ?, end_time = ? WHERE conversation_ID = ?',
-                [updateData.status, updateData.end_time, conversationId]
-            );
-
-            if (status === 'completed' || status === 'liminal') {
+                // Generate and store final summary
                 const summaryResult = await summaryService.generateSummary(conversationId);
                 if (summaryResult.success) {
                     const parsedSummary = parseSummary(summaryResult.summary);
@@ -288,6 +286,12 @@ class ConversationController {
                         );
                     }
                 }
+            } else {
+                // Regular status update
+                await connection.execute(
+                    'UPDATE Conversations SET status = ?, end_time = NULL WHERE conversation_ID = ?',
+                    [status, conversationId]
+                );
             }
 
             await connection.commit();
@@ -295,7 +299,10 @@ class ConversationController {
             res.json({
                 success: true,
                 message: 'Conversation status updated successfully',
-                data: updateData
+                data: {
+                    status,
+                    end_time: status === 'completed' ? new Date().toISOString() : null
+                }
             });
 
         } catch (error) {

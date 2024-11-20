@@ -34,10 +34,13 @@ const SettingsScreen = () => {
                             setIsTabBarVisible(false);
                             await authService.signOut();
                         } catch (error) {
+                            console.error('Logout error:', error);
                             setLoggingOut(false);
-                            Alert.alert('Error', 'Failed to logout. Please try again.');
-                        } finally {
                             setIsTabBarVisible(true);
+                            Alert.alert(
+                                'Error',
+                                'Failed to logout. Please try again.'
+                            );
                         }
                     }
                 }
