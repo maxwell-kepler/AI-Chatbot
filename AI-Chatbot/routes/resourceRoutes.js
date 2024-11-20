@@ -8,6 +8,8 @@ if (process.env.NODE_ENV !== 'test') {
         getAllResources: !!resourceController.getAllResources,
         searchResources: !!resourceController.searchResources,
         getResourcesByCategory: !!resourceController.getResourcesByCategory,
+        matchResources: !!resourceController.matchResources,
+        recordAccess: !!resourceController.recordAccess
     }, '\n');
 }
 
