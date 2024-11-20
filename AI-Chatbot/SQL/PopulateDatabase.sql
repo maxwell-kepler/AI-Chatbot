@@ -169,3 +169,67 @@ CROSS JOIN Tags t
 WHERE r.name IN ('Teen Crisis Line', 'ConnecTeen')
 AND t.name IN ('Crisis Support', 'Crisis Intervention', 'Youth', 'Immediate Help', 'Safety Planning')
 ON DUPLICATE KEY UPDATE resource_ID = VALUES(resource_ID);
+
+INSERT INTO Used_In (resource_ID, tag_ID)
+SELECT r.resource_ID, t.tag_ID
+FROM Resources r
+CROSS JOIN Tags t
+WHERE r.name = 'Distress Centre Calgary'
+AND t.name IN ('Mental Health', 'Safety Planning', 'Professional', 'Family Services', 'Youth')
+ON DUPLICATE KEY UPDATE resource_ID = VALUES(resource_ID);
+
+INSERT INTO Used_In (resource_ID, tag_ID)
+SELECT r.resource_ID, t.tag_ID
+FROM Resources r
+CROSS JOIN Tags t
+WHERE r.name = 'Woods Homes'
+AND t.name IN ('Crisis Support', '24/7 Support', 'Safety Planning', 'Mental Health', 'Emergency Services', 'Youth')
+ON DUPLICATE KEY UPDATE resource_ID = VALUES(resource_ID);
+
+INSERT INTO Used_In (resource_ID, tag_ID)
+SELECT r.resource_ID, t.tag_ID
+FROM Resources r
+CROSS JOIN Tags t
+WHERE r.name = 'ConnecTeen'
+AND t.name IN ('Crisis Support', '24/7 Support', 'Youth', 'Mental Health', 'Safety Planning', 'Confidential')
+ON DUPLICATE KEY UPDATE resource_ID = VALUES(resource_ID);
+
+INSERT INTO Used_In (resource_ID, tag_ID)
+SELECT r.resource_ID, t.tag_ID
+FROM Resources r
+CROSS JOIN Tags t
+WHERE r.name = 'Mobile Response Team'
+AND t.name IN ('Crisis Support', 'Emergency Services', 'Mental Health', 'Immediate Help', 'Professional', 'Crisis Intervention')
+ON DUPLICATE KEY UPDATE resource_ID = VALUES(resource_ID);
+
+INSERT INTO Used_In (resource_ID, tag_ID)
+SELECT r.resource_ID, t.tag_ID
+FROM Resources r
+CROSS JOIN Tags t
+WHERE r.name = 'Access Mental Health - Urgent'
+AND t.name IN ('Crisis Support', 'Professional', 'Mental Health', 'Emergency Services', 'Crisis Intervention')
+ON DUPLICATE KEY UPDATE resource_ID = VALUES(resource_ID);
+
+INSERT INTO Used_In (resource_ID, tag_ID)
+SELECT r.resource_ID, t.tag_ID
+FROM Resources r
+CROSS JOIN Tags t
+WHERE r.name = 'Crisis Housing Program'
+AND t.name IN ('Crisis Support', 'Emergency Housing', 'Safety Planning', 'Immediate Help')
+ON DUPLICATE KEY UPDATE resource_ID = VALUES(resource_ID);
+
+INSERT INTO Used_In (resource_ID, tag_ID)
+SELECT r.resource_ID, t.tag_ID
+FROM Resources r
+CROSS JOIN Tags t
+WHERE r.name = 'Teen Crisis Line'
+AND t.name IN ('Crisis Support', '24/7 Support', 'Youth', 'Mental Health', 'Safety Planning', 'Confidential')
+ON DUPLICATE KEY UPDATE resource_ID = VALUES(resource_ID);
+
+INSERT INTO Used_In (resource_ID, tag_ID)
+SELECT r.resource_ID, t.tag_ID
+FROM Resources r
+CROSS JOIN Tags t
+WHERE r.name = 'Addiction Crisis Service'
+AND t.name IN ('Crisis Support', 'Addiction', 'Treatment', '24/7 Support', 'Mental Health', 'Professional')
+ON DUPLICATE KEY UPDATE resource_ID = VALUES(resource_ID);

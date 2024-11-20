@@ -4,32 +4,30 @@ const { API_URL } = require("../../config/api.server");
 const CRISIS_INDICATORS = {
     SUBSTANCE: ['substance', 'drug', 'alcohol', 'addiction'],
     HOUSING: ['homeless', 'housing', 'shelter'],
-    SUICIDE: ['suicide', 'kill', 'die', 'end my life'],
+    SUICIDE: ['suicide', 'kill myself', 'end my life', 'suicidal'],
     VIOLENCE: ['abuse', 'violence', 'assault', 'hurt'],
-    EMERGENCY: ['emergency', 'crisis', 'urgent', 'immediate']
+    EMERGENCY: ['emergency', 'crisis', 'urgent', 'immediate'],
+    MENTAL_HEALTH: ['anxiety', 'depression', 'panic', 'mental health'],
+    YOUTH: ['teen', 'young', 'youth', 'school'],
+    FAMILY: ['family', 'parent', 'child', 'domestic']
 };
 
 const determineSpecificNeeds = (message = '') => {
-    const needs = [];
+    const needs = new Set();
     const lowerMessage = message.toLowerCase();
 
-    if (CRISIS_INDICATORS.SUBSTANCE.some(term => lowerMessage.includes(term))) {
-        needs.push('substance');
-    }
-    if (CRISIS_INDICATORS.HOUSING.some(term => lowerMessage.includes(term))) {
-        needs.push('housing');
-    }
-    if (CRISIS_INDICATORS.SUICIDE.some(term => lowerMessage.includes(term))) {
-        needs.push('suicide');
-    }
-    if (CRISIS_INDICATORS.VIOLENCE.some(term => lowerMessage.includes(term))) {
-        needs.push('violence');
-    }
-    if (CRISIS_INDICATORS.EMERGENCY.some(term => lowerMessage.includes(term))) {
-        needs.push('emergency');
+    Object.entries(CRISIS_INDICATORS).forEach(([category, terms]) => {
+        if (terms.some(term => lowerMessage.includes(term))) {
+            needs.add(category.toLowerCase());
+        }
+    });
+
+    if (needs.has('suicide')) {
+        needs.add('emergency');
+        needs.add('mental_health');
     }
 
-    return needs;
+    return Array.from(needs);
 };
 
 const matchCrisisToResources = (crisisData) => {
@@ -40,13 +38,17 @@ const matchCrisisToResources = (crisisData) => {
     } = crisisData;
 
     const priorityMap = {
-        severe: ['Crisis Support', 'Crisis Intervention', 'Emergency Services', 'Immediate Help'],
-        moderate: ['Crisis Support', 'Professional', 'Counselling'],
+        severe: ['Crisis Support', 'Crisis Intervention', 'Emergency Services', 'Immediate Help',
+            '24/7 Support'
+        ],
+        moderate: ['Crisis Support', 'Professional', 'Counselling',
+            'Crisis Intervention'],
         low: ['Support Groups', 'Counselling', 'Professional']
     };
 
     let relevantTags = new Set(priorityMap[severity_level] || priorityMap.moderate);
 
+    //need to improve the mapping, still unreliable
     emotional_state.forEach(emotion => {
         switch (emotion.toLowerCase()) {
             case 'crisis':
@@ -66,6 +68,8 @@ const matchCrisisToResources = (crisisData) => {
             case 'suicidal':
                 relevantTags.add('Crisis Intervention');
                 relevantTags.add('24/7 Support');
+                relevantTags.add('Safety Planning');
+
                 break;
         }
     });
