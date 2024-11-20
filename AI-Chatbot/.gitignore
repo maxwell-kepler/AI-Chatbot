@@ -34,8 +34,7 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
-#config.js
-#firebase.js
-#api.config.js
-#database.js
-#api.*.js
+config.js
+firebase.js
+database.js
+api.*.js
