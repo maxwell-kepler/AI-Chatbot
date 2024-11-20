@@ -1,7 +1,9 @@
 // components/specific/Resources/ResourceCard/index.js
 import React from 'react';
-import { View, Text, TouchableOpacity, Linking } from 'react-native';
+import { View, TouchableOpacity, Linking } from 'react-native';
 import { MapPin, Phone, Clock, ExternalLink } from 'lucide-react-native';
+import Card from '../../../common/Card';
+import Text from '../../../common/Text';
 import { theme } from '../../../../styles/theme';
 import styles from './styles';
 
@@ -20,16 +22,16 @@ const ResourceCard = ({ resource }) => {
         : [];
 
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.name}>{resource.name}</Text>
+        <Card
+            title={resource.name}
+            description={resource.description}
+            style={styles.container}
+            rightIcon={
                 <TouchableOpacity onPress={handleWebsitePress}>
                     <ExternalLink size={20} color={theme.colors.primary.main} />
                 </TouchableOpacity>
-            </View>
-
-            <Text style={styles.description}>{resource.description}</Text>
-
+            }
+        >
             <View style={styles.detailsContainer}>
                 {resource.address && (
                     <View style={styles.detailRow}>
@@ -72,7 +74,7 @@ const ResourceCard = ({ resource }) => {
                     </View>
                 )}
             </View>
-        </View>
+        </Card>
     );
 };
 

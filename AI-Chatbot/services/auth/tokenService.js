@@ -3,8 +3,8 @@ import { auth } from '../../config/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, Platform } from 'react-native';
 
-const TOKEN_EXPIRY_TIME = 15 * 1000; // 15 minute for testing
-const WARNING_TIME = 5 * 1000; // Warn 60 seconds before expiry
+const TOKEN_EXPIRY_TIME = 15 * 60 * 1000; // 15 minute for testing
+const WARNING_TIME = 5 * 60 * 1000; // Warn 60 seconds before expiry
 const LAST_ACTIVITY_KEY = 'lastActivityTimestamp';
 const TOKEN_KEY = 'authToken';
 
