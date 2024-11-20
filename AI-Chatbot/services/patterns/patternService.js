@@ -2,28 +2,40 @@
 const { API_URL } = require("../../config/api.server");
 
 const patternService = {
-    recordPattern: async (userId, patternType, patternValue, messageContent) => {
+    recordEmotionalState: async (userId, emotionalState, messageContent) => {
         try {
-            const response = await fetch(`${API_URL}/patterns/record`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    userId,
-                    patternType,
-                    patternValue,
-                    messageContent
-                })
-            });
+            const patterns = emotionalState.state.map(emotion => ({
+                patternType: 'emotion',
+                patternValue: emotion,
+            }));
 
-            if (!response.ok) {
-                throw new Error('Failed to record pattern');
-            }
+            const results = await Promise.all(patterns.map(async pattern => {
+                const response = await fetch(`${API_URL}/patterns/record`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId,
+                        patternType: pattern.patternType,
+                        patternValue: pattern.patternValue,
+                        messageContent
+                    })
+                });
 
-            return await response.json();
+                if (!response.ok) {
+                    throw new Error(`Failed to record pattern: ${pattern.patternValue}`);
+                }
+
+                return response.json();
+            }));
+
+            return {
+                success: true,
+                data: results
+            };
         } catch (error) {
-            console.error('Error recording pattern:', error);
+            console.error('Error in recordEmotionalState:', error);
             return {
                 success: false,
                 error: error.message

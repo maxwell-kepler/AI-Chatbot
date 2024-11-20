@@ -37,11 +37,16 @@ export default StyleSheet.create({
         color: theme.colors.neutral.white,
         fontWeight: '600',
     },
+    mainContent: {
+        padding: theme.spacing.md,
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.neutral.grey200,
+    },
     emotionsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        padding: theme.spacing.sm,
         gap: theme.spacing.xs,
+        marginBottom: theme.spacing.sm,
     },
     emotionTag: {
         paddingHorizontal: theme.spacing.sm,
@@ -52,6 +57,14 @@ export default StyleSheet.create({
         ...theme.typography.presets.caption,
         color: theme.colors.neutral.grey800,
         fontWeight: '500',
+    },
+    concernsContainer: {
+        marginTop: theme.spacing.xs,
+    },
+    concernText: {
+        ...theme.typography.presets.body2,
+        color: theme.colors.neutral.grey700,
+        marginBottom: theme.spacing.xxs,
     },
     expandedContent: {
         padding: theme.spacing.md,

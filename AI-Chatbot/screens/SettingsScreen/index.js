@@ -41,6 +41,8 @@ const SettingsScreen = () => {
                                 'Error',
                                 'Failed to logout. Please try again.'
                             );
+                        } finally {
+                            setIsTabBarVisible(true);
                         }
                     }
                 }
