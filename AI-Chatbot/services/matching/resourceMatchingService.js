@@ -150,8 +150,10 @@ export const resourceMatchingService = {
         }
     },
 
-    recordResourceAccess: async (userId, resourceId, source = 'crisis') => {
+    recordResourceAccess: async (userId, resourceId, source = 'chat') => {
         try {
+            console.log('Recording resource access:', { userId, resourceId, source });
+
             const response = await fetch(`${API_URL}/resources/access`, {
                 method: 'POST',
                 headers: {
@@ -165,10 +167,13 @@ export const resourceMatchingService = {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to record resource access');
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to record resource access');
             }
 
             const data = await response.json();
+            console.log('Successfully recorded resource access');
+
             return {
                 success: true,
                 data: data.data
