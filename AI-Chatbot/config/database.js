@@ -9,7 +9,6 @@ const dbConfig = {
     waitForConnections: true,
     connectionLimit: 25,
     queueLimit: 30,
-    timezone: 'America/Denver',
     dateStrings: true
 };
 
