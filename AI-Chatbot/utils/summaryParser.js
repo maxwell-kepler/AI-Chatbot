@@ -8,29 +8,56 @@ const parseSummary = (summaryText) => {
             recommendations: []
         };
 
-        const sections = summaryText.split('\n\n');
+        const cleanedText = summaryText.replace(/\*\*/g, '');
 
-        for (const section of sections) {
-            const lines = section.split('\n');
-            const heading = lines[0].toLowerCase();
+        const sectionRegex = /(?:^|\n)(Key Emotions:|Main Concerns:|Progress Made:|Recommendations:)/g;
+        const sections = cleanedText.split(sectionRegex).filter(Boolean);
 
-            const points = lines.slice(1)
-                .map(line => line.replace(/^[•\-\*]\s*/, '').trim())
-                .filter(line => line.length > 0);
+        let currentSection = null;
+        sections.forEach(section => {
+            const trimmedSection = section.trim();
 
-            if (heading.includes('key emotions')) {
-                parsed.emotions = points
-                    .flatMap(point => point.split(','))
-                    .map(emotion => emotion.trim())
-                    .filter(emotion => emotion.length > 0);
-            } else if (heading.includes('main concerns')) {
-                parsed.main_concerns = points;
-            } else if (heading.includes('progress made')) {
-                parsed.progress_notes = points;
-            } else if (heading.includes('recommendations')) {
-                parsed.recommendations = points;
+            if (trimmedSection === 'Key Emotions:') {
+                currentSection = 'emotions';
+            } else if (trimmedSection === 'Main Concerns:') {
+                currentSection = 'main_concerns';
+            } else if (trimmedSection === 'Progress Made:') {
+                currentSection = 'progress_notes';
+            } else if (trimmedSection === 'Recommendations:') {
+                currentSection = 'recommendations';
+            } else if (currentSection) {
+                const points = trimmedSection
+                    .split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.startsWith('-'))
+                    .map(line => line.replace(/^-\s*/, '').trim())
+                    .filter(line => line.length > 0);
+
+                if (points.length > 0) {
+                    parsed[currentSection].push(...points);
+                }
             }
+        });
+
+        if (parsed.emotions.length === 0) {
+            parsed.emotions = ['Neutral'];
         }
+        if (parsed.main_concerns.length === 0) {
+            parsed.main_concerns = ['No specific concerns identified'];
+        }
+        if (parsed.progress_notes.length === 0) {
+            parsed.progress_notes = ['Conversation initiated'];
+        }
+        if (parsed.recommendations.length === 0) {
+            parsed.recommendations = ['Continue engaging with support services as needed'];
+        }
+
+        console.log('Parsed summary:', {
+            emotions: parsed.emotions,
+            main_concerns: parsed.main_concerns,
+            progress_notes: parsed.progress_notes,
+            recommendations: parsed.recommendations
+        });
 
         return {
             success: true,
@@ -39,6 +66,7 @@ const parseSummary = (summaryText) => {
         };
     } catch (error) {
         console.error('Error parsing summary:', error);
+        console.error('Original text:', summaryText);
         return {
             success: false,
             error: error.message

@@ -99,6 +99,44 @@ class AuthService {
 
                 try {
                     const token = await tokenService.getToken();
+                    const crisisResponse = await fetch(
+                        `${API_URL}/tracking/firebase/${currentUser.uid}/crisis-events`,
+                        {
+                            headers: {
+                                Authorization: token ? `Bearer ${token}` : ''
+                            }
+                        }
+                    );
+
+                    if (crisisResponse.ok) {
+                        const { data: crisisEvents } = await crisisResponse.json();
+                        const ongoingEvents = crisisEvents.filter(event => !event.resolved_at);
+
+                        console.log(`Found ${ongoingEvents.length} ongoing crisis events to resolve`);
+
+                        await Promise.all(ongoingEvents.map(async (event) => {
+                            try {
+                                await fetch(
+                                    `${API_URL}/conversations/${event.conversation_ID}/crisis-events/${event.event_ID}/resolution`,
+                                    {
+                                        method: 'PUT',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            Authorization: token ? `Bearer ${token}` : ''
+                                        },
+                                        body: JSON.stringify({
+                                            resolutionNotes: 'Crisis event automatically resolved at session end',
+                                            actionTaken: 'Session ended with no further escalation needed'
+                                        })
+                                    }
+                                );
+                                console.log(`Resolved crisis event: ${event.event_ID}`);
+                            } catch (error) {
+                                console.error(`Error resolving crisis event ${event.event_ID}:`, error);
+                            }
+                        }));
+                    }
+
                     const response = await fetch(
                         `${API_URL}/users/firebase/${currentUser.uid}/active-conversations`,
                         {
@@ -110,14 +148,51 @@ class AuthService {
 
                     if (response.ok) {
                         const { conversations } = await response.json();
+                        console.log(`Found ${conversations.length} active conversations to complete`);
+
                         await Promise.all(conversations.map(async (conv) => {
-                            console.log('Handling conversation:', conv.conversation_ID);
+                            console.log(`Completing conversation: ${conv.conversation_ID}`);
+
+                            try {
+                                const summaryResponse = await fetch(
+                                    `${API_URL}/conversations/${conv.conversation_ID}/summary`,
+                                    {
+                                        method: 'GET',
+                                        headers: {
+                                            Authorization: token ? `Bearer ${token}` : ''
+                                        }
+                                    }
+                                );
+
+                                if (!summaryResponse.ok) {
+                                    throw new Error('Failed to generate summary');
+                                }
+
+                                const updateResponse = await fetch(
+                                    `${API_URL}/conversations/${conv.conversation_ID}/status`,
+                                    {
+                                        method: 'PUT',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            Authorization: token ? `Bearer ${token}` : ''
+                                        },
+                                        body: JSON.stringify({ status: 'completed' })
+                                    }
+                                );
+
+                                if (!updateResponse.ok) {
+                                    throw new Error('Failed to update conversation status');
+                                }
+
+                                console.log(`Successfully completed conversation: ${conv.conversation_ID}`);
+                            } catch (error) {
+                                console.error(`Error completing conversation ${conv.conversation_ID}:`, error);
+                            }
                         }));
                     }
                 } catch (error) {
-                    console.warn('Error handling active conversations:', error);
+                    console.error('Error handling active conversations during logout:', error);
                 }
-
                 await userService.updateLastLogin(currentUser.uid);
             }
 

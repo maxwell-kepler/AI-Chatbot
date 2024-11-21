@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import { theme } from '../../../../styles/theme';
 import styles from './styles';
+import { formatDateForMySQL, formatDisplayDateTime } from '../../../../utils/dateFormatter';
 
 const ConversationSummaryCard = ({ summary }) => {
     const [expanded, setExpanded] = useState(false);
@@ -53,11 +54,7 @@ const ConversationSummaryCard = ({ summary }) => {
             >
                 <View style={styles.headerLeft}>
                     <Text style={styles.date}>
-                        {new Date(summary.end_time).toLocaleDateString()} at{' '}
-                        {new Date(summary.end_time).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        })}
+                        {formatDisplayDateTime(formatDateForMySQL(summary.end_time))}
                     </Text>
                     {summary.risk_level && (
                         <View style={[
@@ -77,36 +74,36 @@ const ConversationSummaryCard = ({ summary }) => {
                 )}
             </TouchableOpacity>
 
-            {summary.emotions?.length > 0 && (
-                <View style={styles.emotionsContainer}>
-                    {summary.emotions.map((emotion, i) => (
-                        <View
-                            key={i}
-                            style={[
-                                styles.emotionTag,
-                                { backgroundColor: getEmotionColor(emotion.toLowerCase()) }
-                            ]}
-                        >
-                            <Text style={styles.emotionText}>{emotion}</Text>
-                        </View>
-                    ))}
-                </View>
-            )}
+            <View style={styles.mainContent}>
+                {summary.emotions?.length > 0 && (
+                    <View style={styles.emotionsContainer}>
+                        {summary.emotions.map((emotion, i) => (
+                            <View
+                                key={i}
+                                style={[
+                                    styles.emotionTag,
+                                    { backgroundColor: getEmotionColor(emotion.toLowerCase()) }
+                                ]}
+                            >
+                                <Text style={styles.emotionText}>{emotion}</Text>
+                            </View>
+                        ))}
+                    </View>
+                )}
+
+                {summary.main_concerns?.length > 0 && (
+                    <View style={styles.concernsContainer}>
+                        {summary.main_concerns.map((concern, i) => (
+                            <Text key={i} style={styles.concernText}>
+                                • {concern}
+                            </Text>
+                        ))}
+                    </View>
+                )}
+            </View>
 
             {expanded && (
                 <View style={styles.expandedContent}>
-                    {summary.main_concerns?.length > 0 && (
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Key Concerns</Text>
-                            {summary.main_concerns.map((concern, i) => (
-                                <View key={i} style={styles.bulletPoint}>
-                                    <Text style={styles.bulletDot}>•</Text>
-                                    <Text style={styles.bulletText}>{concern}</Text>
-                                </View>
-                            ))}
-                        </View>
-                    )}
-
                     {summary.progress_notes?.length > 0 && (
                         <View style={styles.section}>
                             <Text style={styles.sectionTitle}>Progress Made</Text>

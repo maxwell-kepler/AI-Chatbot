@@ -38,29 +38,6 @@ const ChatScreen = () => {
     const appStateRef = useRef(AppState.currentState);
     const backgroundTimerRef = useRef(null);
 
-    // Initialize conversation only when user sends first message
-    const initializeConversation = async () => {
-        try {
-            console.log('Initializing new conversation');
-            const result = await conversationService.createConversation(user.uid);
-
-            if (result.success) {
-                setConversationId(result.conversationId);
-                setCurrentStatus(result.status);
-                return result.conversationId;
-            } else {
-                throw new Error(result.error);
-            }
-        } catch (error) {
-            console.error('Error initializing conversation:', error);
-            Alert.alert(
-                'Error',
-                'Failed to start conversation. Please try again.'
-            );
-            return null;
-        }
-    };
-
     useEffect(() => {
         const subscription = AppState.addEventListener('change', nextAppState => {
             if (
@@ -147,12 +124,15 @@ const ChatScreen = () => {
                 );
 
                 if (summaryResult.success) {
-                    await conversationService.updateConversationStatus(
+                    const result = await conversationService.updateConversationStatus(
                         conversationId,
-                        'completed',
-                        summaryResult.summary
+                        'completed'
                     );
-                    setCurrentStatus('completed');
+                    if (result.success) {
+                        setCurrentStatus('completed');
+                    } else {
+                        console.error('Failed to complete conversation:', result.error);
+                    }
                 }
             } catch (error) {
                 console.error('Error completing conversation:', error);
@@ -191,28 +171,6 @@ const ChatScreen = () => {
                 );
             }
 
-            if (safetyCheck.isCritical && currentConversationId) {
-                console.log('Recording crisis event for conversation:', currentConversationId);
-
-                try {
-                    await conversationService.recordCrisisEvent(
-                        currentConversationId,
-                        user.uid,
-                        'severe',
-                        'User expressed thoughts of self-harm or suicide'
-                    );
-                    console.log('Crisis event recorded successfully');
-
-                    await conversationService.updateRiskLevel(
-                        currentConversationId,
-                        'high'
-                    );
-                    console.log('Risk level updated successfully');
-                } catch (crisisError) {
-                    console.error('Error handling crisis event:', crisisError);
-                }
-            }
-
             const emotionalState = emotionDetectionService.detectEmotionalState(message);
             console.log('Detected emotional state:', emotionalState);
 
@@ -233,55 +191,100 @@ const ChatScreen = () => {
                     emotionalState
                 );
 
-                const response = await chatWithGemini(message);
-                const { text, isCrisis, insights } = response;
+                let resourcesShown = false;
 
-                const severity = safetyCheck.isCritical ? 'severe' : 'moderate';
-                const matchedResources = await resourceMatchingService.getMatchingResources(
-                    severity,
-                    emotionalState,
-                    message
+                if (safetyCheck.isCritical && currentConversationId) {
+                    console.log('Handling crisis situation');
+
+                    try {
+                        await conversationService.recordCrisisEvent(
+                            currentConversationId,
+                            user.uid,
+                            'severe',
+                            'User expressed thoughts of self-harm or suicide'
+                        );
+
+                        await conversationService.updateRiskLevel(
+                            currentConversationId,
+                            'high'
+                        );
+
+                        const matchedResources = await resourceMatchingService.getMatchingResources(
+                            'severe',
+                            emotionalState,
+                            message
+                        );
+
+                        if (matchedResources.success && matchedResources.data.length > 0) {
+                            await Promise.all(matchedResources.data.map(resource =>
+                                resourceMatchingService.recordResourceAccess(
+                                    user.uid,
+                                    resource.resource_ID,
+                                    'crisis'
+                                )
+                            ));
+
+                            setMessages(prev => [...prev, {
+                                text: "Based on what you're sharing, here are some immediate resources that can help:",
+                                isUser: false,
+                                timestamp: new Date(),
+                            }, {
+                                text: formatResourceRecommendations(matchedResources.data),
+                                isUser: false,
+                                timestamp: new Date(),
+                                isResourceRecommendation: true
+                            }]);
+                            resourcesShown = true;
+                        }
+                    } catch (crisisError) {
+                        console.error('Error handling crisis event:', crisisError);
+                    }
+                }
+
+                const response = await chatWithGemini(message);
+                const { text, insights } = response;
+
+                const aiResponse = {
+                    text,
+                    isUser: false,
+                    timestamp: new Date(),
+                };
+                setMessages(prev => [...prev, aiResponse]);
+
+                await conversationService.addMessage(
+                    currentConversationId,
+                    text,
+                    'ai',
+                    response.emotionalState
                 );
 
-                if (matchedResources.success && matchedResources.data.length > 0) {
-                    const aiResponse = {
-                        text,
-                        isUser: false,
-                        timestamp: new Date(),
-                    };
-                    setMessages(prev => [...prev, aiResponse]);
-
-                    setMessages(prev => [...prev, {
-                        text: "Here are some resources that might help:",
-                        isUser: false,
-                        timestamp: new Date()
-                    }, {
-                        text: formatResourceRecommendations(matchedResources.data),
-                        isUser: false,
-                        timestamp: new Date(),
-                        isResourceRecommendation: true
-                    }]);
-
-                    await conversationService.addMessage(
-                        currentConversationId,
-                        text,
-                        'ai',
-                        response.emotionalState
+                if (!resourcesShown && !safetyCheck.isCritical) {
+                    const matchedResources = await resourceMatchingService.getMatchingResources(
+                        'moderate',
+                        emotionalState,
+                        message
                     );
-                } else {
-                    const aiResponse = {
-                        text,
-                        isUser: false,
-                        timestamp: new Date(),
-                    };
-                    setMessages(prev => [...prev, aiResponse]);
 
-                    await conversationService.addMessage(
-                        currentConversationId,
-                        text,
-                        'ai',
-                        response.emotionalState
-                    );
+                    if (matchedResources.success && matchedResources.data.length > 0) {
+                        await Promise.all(matchedResources.data.map(resource =>
+                            resourceMatchingService.recordResourceAccess(
+                                user.uid,
+                                resource.resource_ID,
+                                'chat'
+                            )
+                        ));
+
+                        setMessages(prev => [...prev, {
+                            text: "Here are some resources that might help:",
+                            isUser: false,
+                            timestamp: new Date()
+                        }, {
+                            text: formatResourceRecommendations(matchedResources.data),
+                            isUser: false,
+                            timestamp: new Date(),
+                            isResourceRecommendation: true
+                        }]);
+                    }
                 }
 
                 if (!safetyCheck.isCritical) {
@@ -371,14 +374,13 @@ const ChatScreen = () => {
         }
     };
 
-
     const formatResourceRecommendations = (resources) => {
         let message = "";
         resources.forEach(resource => {
             message += `${resource.name.toUpperCase()}\n`;
             message += `${resource.description}\n\n`;
             if (resource.phone) {
-                message += `Call: [${resource.phone}](tel:${resource.phone})\n`;
+                message += `Call: [${resource.phone}](tel:${resource.phone.replace(/[^0-9]/g, '')})\n`;
             }
             if (resource.hours) {
                 message += `Hours: ${resource.hours}\n`;

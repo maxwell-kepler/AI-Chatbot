@@ -143,7 +143,13 @@ class ResourceController {
     recordAccess = async (req, res, next) => {
         const connection = await db.getConnection();
         try {
+            await connection.beginTransaction();
+
             const { userId: firebaseId, resourceId, referralSource } = req.body;
+
+            if (!firebaseId || !resourceId) {
+                throw new Error('Missing required parameters');
+            }
 
             const [users] = await connection.execute(
                 'SELECT user_ID FROM Users WHERE firebase_ID = ?',
@@ -154,10 +160,20 @@ class ResourceController {
                 throw new Error('User not found');
             }
 
+            const mysqlUserId = users[0].user_ID;
+
             await connection.execute(
                 'INSERT INTO Accessed_By (user_ID, resource_ID, referral_source) VALUES (?, ?, ?)',
-                [users[0].user_ID, resourceId, referralSource]
+                [mysqlUserId, resourceId, referralSource || 'chat']
             );
+
+            await connection.commit();
+
+            console.log('Resource access recorded:', {
+                userId: mysqlUserId,
+                resourceId,
+                referralSource
+            });
 
             res.json({
                 success: true,
@@ -165,11 +181,13 @@ class ResourceController {
             });
 
         } catch (error) {
+            await connection.rollback();
+            console.error('Error recording resource access:', error);
             next(error);
         } finally {
             connection.release();
         }
-    }
+    };
 }
 
 module.exports = new ResourceController();

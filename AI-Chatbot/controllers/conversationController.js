@@ -1,6 +1,6 @@
 // controllers/conversationController.js
 const db = require('../config/database');
-const { formatDateForMySQL } = require('../utils/dateFormatter');
+const { formatDateForMySQL, getCurrentTime } = require('../utils/dateFormatter');
 const summaryService = require('../services/summary/summaryService');
 const patternService = require('../services/patterns/patternService');
 const { parseSummary } = require('../utils/summaryParser');
@@ -23,7 +23,8 @@ class ConversationController {
         try {
             await connection.beginTransaction();
 
-            const { userId: firebaseId, status, startTime } = req.body;
+            const { userId: firebaseId, status } = req.body;
+            const startTime = formatDateForMySQL(new Date());
 
             if (!firebaseId) {
                 throw new Error('userId is required');
@@ -75,17 +76,24 @@ class ConversationController {
             }
 
             const [result] = await connection.execute(
-                'INSERT INTO Conversations (user_ID, status, start_time) VALUES (?, ?, ?)',
-                [mysqlUserId, status || 'active', formattedStartTime]
+                `INSERT INTO Conversations 
+                (user_ID, status, start_time) 
+                VALUES (?, ?, ?)`,
+                [
+                    mysqlUserId,
+                    status || 'active',
+                    getCurrentTime()
+                ]
             );
-
             await connection.commit();
 
             const response = {
                 success: true,
                 message: 'Conversation created successfully',
-                conversationId: result.insertId
+                conversationId: result.insertId,
+                startTime
             };
+
             if (process.env.NODE_ENV !== 'test') {
                 console.log('Conversation created successfully:', response);
             }
@@ -117,14 +125,6 @@ class ConversationController {
                     error: 'Message content cannot be empty'
                 });
             }
-            if (process.env.NODE_ENV !== 'test') {
-                console.log('Adding message with emotional state:', {
-                    conversationId,
-                    senderType,
-                    emotionalState,
-                    timestamp
-                });
-            }
 
             // Get user ID for the conversation first
             const [conversations] = await connection.execute(
@@ -137,9 +137,7 @@ class ConversationController {
             }
 
             const userId = conversations[0].user_ID;
-            if (process.env.NODE_ENV !== 'test') {
-                console.log('Found user ID:', userId);
-            }
+
             // Add the message
             const [result] = await connection.execute(
                 `INSERT INTO Messages 
@@ -156,17 +154,15 @@ class ConversationController {
 
             // Only record patterns for user messages with emotional state
             if (senderType === 'user' && emotionalState) {
-                if (process.env.NODE_ENV !== 'test') {
-                    console.log('Recording emotional pattern for user:', userId);
-                }
                 try {
-                    await patternService.recordEmotionalState(
+                    const patternResult = await patternService.recordEmotionalState(
                         userId,
                         emotionalState,
                         content
                     );
-                    if (process.env.NODE_ENV !== 'test') {
-                        console.log('Successfully recorded emotional pattern');
+
+                    if (!patternResult.success) {
+                        console.warn('Failed to record emotional pattern:', patternResult.error);
                     }
                 } catch (patternError) {
                     console.error('Error recording pattern:', patternError);
@@ -175,7 +171,7 @@ class ConversationController {
 
             await connection.commit();
 
-            const response = {
+            res.status(201).json({
                 success: true,
                 message: 'Message added successfully',
                 data: {
@@ -186,20 +182,15 @@ class ConversationController {
                     emotionalState,
                     timestamp: formatDateForMySQL(timestamp || new Date())
                 }
-            };
-            if (process.env.NODE_ENV !== 'test') {
-                console.log('Message successfully added:', response);
-            }
-            res.status(201).json(response);
+            });
 
         } catch (error) {
             await connection.rollback();
-            console.error('Error in addMessage:', error);
             next(error);
         } finally {
             connection.release();
         }
-    }
+    };
 
     isValidStatusTransition = (currentStatus, newStatus) => {
         // If transitioning to the same status, consider it valid
@@ -232,7 +223,7 @@ class ConversationController {
 
             // Get current conversation state
             const [conversations] = await connection.execute(
-                'SELECT status FROM Conversations WHERE conversation_ID = ?',
+                'SELECT status, end_time FROM Conversations WHERE conversation_ID = ?',
                 [conversationId]
             );
 
@@ -256,22 +247,32 @@ class ConversationController {
                 throw new Error(`Invalid status transition from ${currentStatus} to ${status}`);
             }
 
-            // Update conversation
-            const updateData = {
-                status,
-                end_time: status === 'completed' ? formatDateForMySQL(new Date()) : null
-            };
+            // Special handling for completion
+            if (status === 'completed') {
+                await connection.execute(
+                    `UPDATE Conversations 
+                    SET status = ?, 
+                        end_time = ? 
+                    WHERE conversation_ID = ?`,
+                    [
+                        status,
+                        getCurrentTime(),
+                        conversationId
+                    ]
+                );
 
-            await connection.execute(
-                'UPDATE Conversations SET status = ?, end_time = ? WHERE conversation_ID = ?',
-                [updateData.status, updateData.end_time, conversationId]
-            );
-
-            if (status === 'completed' || status === 'liminal') {
+                // Generate and store final summary
                 const summaryResult = await summaryService.generateSummary(conversationId);
                 if (summaryResult.success) {
                     const parsedSummary = parseSummary(summaryResult.summary);
                     if (parsedSummary.success) {
+                        console.log('Storing parsed summary:', parsedSummary);
+
+                        const emotions = JSON.stringify(parsedSummary.parsed.emotions || []);
+                        const mainConcerns = JSON.stringify(parsedSummary.parsed.main_concerns || []);
+                        const progressNotes = JSON.stringify(parsedSummary.parsed.progress_notes || []);
+                        const recommendations = JSON.stringify(parsedSummary.parsed.recommendations || []);
+
                         await connection.execute(
                             `INSERT INTO Conversation_Summaries 
                             (conversation_ID, emotions, main_concerns, progress_notes, 
@@ -279,15 +280,26 @@ class ConversationController {
                             VALUES (?, ?, ?, ?, ?, ?)`,
                             [
                                 conversationId,
-                                JSON.stringify(parsedSummary.parsed.emotions),
-                                JSON.stringify(parsedSummary.parsed.main_concerns),
-                                JSON.stringify(parsedSummary.parsed.progress_notes),
-                                JSON.stringify(parsedSummary.parsed.recommendations),
-                                parsedSummary.raw
+                                emotions,
+                                mainConcerns,
+                                progressNotes,
+                                recommendations,
+                                summaryResult.summary
                             ]
                         );
+                        console.log('Successfully stored summary in database');
+                    } else {
+                        console.error('Failed to parse summary:', parsedSummary.error);
                     }
+                } else {
+                    console.error('Failed to generate summary:', summaryResult.error);
                 }
+            } else {
+                // Regular status update
+                await connection.execute(
+                    'UPDATE Conversations SET status = ?, end_time = NULL WHERE conversation_ID = ?',
+                    [status, conversationId]
+                );
             }
 
             await connection.commit();
@@ -295,7 +307,10 @@ class ConversationController {
             res.json({
                 success: true,
                 message: 'Conversation status updated successfully',
-                data: updateData
+                data: {
+                    status,
+                    end_time: status === 'completed' ? new Date().toISOString() : null
+                }
             });
 
         } catch (error) {
@@ -476,14 +491,14 @@ class ConversationController {
         try {
             const { conversationId, eventId } = req.params;
             const { resolutionNotes, actionTaken } = req.body;
-
+            const currentTime = formatDateForMySQL(new Date());
             const [result] = await connection.execute(
                 `UPDATE Crisis_Events 
                 SET resolution_notes = ?,
                     action_taken = ?,
-                    resolved_at = CURRENT_TIMESTAMP
+                    resolved_at = ?
                 WHERE event_ID = ? AND conversation_ID = ?`,
-                [resolutionNotes, actionTaken, eventId, conversationId]
+                [resolutionNotes, actionTaken, currentTime, eventId, conversationId]
             );
 
             if (result.affectedRows === 0) {
@@ -493,12 +508,37 @@ class ConversationController {
                 });
             }
 
+            const [unresolvedEvents] = await connection.execute(
+                `SELECT COUNT(*) as count 
+                 FROM Crisis_Events 
+                 WHERE conversation_ID = ? 
+                 AND resolved_at IS NULL`,
+                [conversationId]
+            );
+
+            if (unresolvedEvents[0].count === 0) {
+                await connection.execute(
+                    `UPDATE Conversations 
+                     SET risk_level = 'low' 
+                     WHERE conversation_ID = ?`,
+                    [conversationId]
+                );
+            }
+
+            await connection.commit();
+
             res.json({
                 success: true,
-                message: 'Crisis resolution updated successfully'
+                message: 'Crisis resolution updated successfully',
+                data: {
+                    eventId,
+                    resolvedAt: currentTime,
+                    conversationRiskLevel: unresolvedEvents[0].count === 0 ? 'low' : undefined
+                }
             });
 
         } catch (error) {
+            await connection.rollback();
             next(error);
         } finally {
             connection.release();

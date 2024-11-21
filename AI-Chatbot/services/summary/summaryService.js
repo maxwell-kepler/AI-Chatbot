@@ -4,27 +4,32 @@ const configAPI = require('../../config/config');
 
 const genAI = new GoogleGenerativeAI(configAPI.GEMINI_API_KEY);
 
-const SUMMARY_PROMPT = `Create a structured summary of this mental health support conversation using exactly the following format:
+const SUMMARY_PROMPT = `Analyze this mental health support conversation and create a structured summary using EXACTLY this format:
 
 Key Emotions:
-- List 3-5 primary emotions expressed during the conversation, in order of prominence
+- List primary emotional states expressed
+- Include at least one emotion
+- Maximum 3 emotions
 
 Main Concerns:
-- Extract 2-3 key issues or concerns discussed
-- Focus on the most significant topics only
+- List key issues or worries discussed
+- Include at least one concern
+- Maximum 3 concerns
 
 Progress Made:
-- Identify any notable insights gained or positive developments
-- Note any shifts in perspective or understanding
+- Note any positive developments or insights
+- Include at least one point of progress
+- Maximum 3 points
 
 Recommendations:
-- List specific actions or strategies suggested
-- Include any resources recommended
+- Suggest next steps or helpful strategies
+- Include at least one recommendation
+- Maximum 3 recommendations
 
-Keep each section concise but informative. Use bullet points as shown above.
-Maintain a compassionate but professional tone.
-
-Here's the conversation to summarize:`;
+Use EXACTLY the section headers shown above.
+Start each point with a dash (-).
+Keep each point concise and clear.
+If no information is available for a section, provide a reasonable default.`;
 
 const summaryService = {
     generateSummary: async (conversationId) => {
@@ -53,7 +58,7 @@ const summaryService = {
                 .filter(msg => msg.content && msg.content.trim())
                 .map(msg => {
                     const role = msg.sender_type === 'user' ? 'User' : 'Assistant';
-                    let emotionalState;
+                    let emotionalState = null;
 
                     if (msg.emotional_state) {
                         try {
@@ -62,7 +67,6 @@ const summaryService = {
                                 : msg.emotional_state;
                         } catch (e) {
                             console.warn('Error parsing emotional state:', e);
-                            emotionalState = null;
                         }
                     }
 
@@ -74,21 +78,18 @@ const summaryService = {
                 .join('\n\n');
 
             const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-            const prompt = `${SUMMARY_PROMPT}\n\n${conversationText}`;
+            const prompt = `${SUMMARY_PROMPT}\n\nConversation to analyze:\n\n${conversationText}`;
+
+            console.log('Generating summary with prompt length:', prompt.length);
 
             const result = await model.generateContent(prompt);
             const response = await result.response;
             const summary = response.text();
 
-            // Validate summary structure
-            const requiredSections = ['Key Emotions:', 'Main Concerns:', 'Progress Made:', 'Recommendations:'];
-            const hasSections = requiredSections.every(section => summary.includes(section));
+            console.log('Generated raw summary:', summary);
 
-            if (!hasSections) {
-                return {
-                    success: false,
-                    error: 'Summary format validation failed'
-                };
+            if (!summary || summary.trim().length === 0) {
+                throw new Error('Generated summary is empty');
             }
 
             return {
